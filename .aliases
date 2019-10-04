@@ -12,10 +12,8 @@ alias incstack="ulimit -s unlimited"
 alias redis-cli="~/Tools/redis/redis-3.0.6/src/redis-cli"
 
 # Jump to directories
-alias cf="cd /home/rr/Code/CF" #; cp ~/.vimrc.min ~/.vimrc"
-alias tc="cd /home/rr/Code/Topcoder; cp ~/.vimrc.full ~/.vimrc"
-alias src="source ENV/bin/activate"
-alias note="cd /home/rr/Code/ACM_Notebook_new; cp ~/.vimrc.full ~/.vimrc"
+alias cf="cd /home/caothesan/Documents/code/cp" #; cp ~/.vimrc.min ~/.vimrc"
+alias note="cd /home/caothesan/Documents/code/projects; cp ~/.vimrc.full ~/.vimrc"
 
 # Tmux
 alias tm="cp ~/.vimrc.full ~/.vimrc; tmux -2"
@@ -58,10 +56,7 @@ kill80() {
 	sudo lsof -i :80 | grep 'nginx' | awk '{ print $2 }' | xargs sudo kill -9
 }
 
-# Distributed GCJ stuff
-alias dcj='/home/rr/Code/CF/DCJ/dcj_linux/dcj.sh'
-alias dcc='function _dcc() { cp "$1/$1$2.h" "$1/$1.h"; dcj build --source="$1/$1.cpp" }; _dcc'
-alias dcr='function _dcr() { dcj run --executable="$1/$1" --nodes=$2 --output=all }; _dcr'
-# end of Distributed GCJ
-
 alias ']'='xdg-open'
+
+# Dotfiles manager
+alias dotfiles="/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"

@@ -23,7 +23,7 @@ Bundle 'hdima/python-syntax'
 Bundle 'ngthanhtrung23/vim-markdown'
 Bundle 'ngthanhtrung23/vim-comment'
 Bundle 'ngthanhtrung23/vim-extended-bash'
-"Bundle 'Valloric/YouCompleteMe'
+Bundle 'Valloric/YouCompleteMe'
 Bundle 'junegunn/vim-easy-align'
 Bundle 'mileszs/ack.vim'
 Bundle 'christoomey/vim-tmux-navigator'
@@ -42,6 +42,8 @@ filetype plugin indent on
 let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map'
 " Override netrw settings to show line numbers
 let g:netrw_bufsettings = 'noma nomod nu nobl nowrap ro'
+" Set size for the new :Lexplore
+let g:netrw_winsize = 16
 
 " vim-airlien
 function! AirlineInit()
@@ -123,7 +125,7 @@ color jellybeans	" set background=dark for other machine, but use jellybeans in 
 " }}}
 
 " vim-localvimrc
-let g:localvimrc_whitelist='/Users/trungnt/Code/'
+let g:localvimrc_whitelist='/home/caothesan/Documents/code/'
 
 " -----------------------------------------------------------------------------
 " Stuffs that should be set by default: {{{
@@ -141,7 +143,7 @@ set nu						" show line number
 set hlsearch			" highlight search result
 " y and d put stuff into system clipboard (so that other apps can see it)
 set clipboard=unnamed,unnamedplus
-"set mouse=a			 " enable mouse. At least this should work for iTerm
+set mouse=a			 " enable mouse. At least this should work for iTerm
 set textwidth=0
 " Open new split to right / bottom
 set splitbelow
@@ -171,8 +173,8 @@ set showcmd
 set timeout			 " adjust timeout for mapped commands
 set timeoutlen=1200
 
-set visualbell		" Tell vim to shutup
-set noerrorbells	" Tell vim to shutup!
+" set visualbell		" Tell vim to shutup
+" set noerrorbells	" Tell vim to shutup!
 " }}}
 
 " Display related: {{{
@@ -316,7 +318,7 @@ au BufRead,BufNewFile *.handlebars,*.hbs set ft=html syntax=handlebars
 
 nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
-nnoremap <C-N> :Ex<cr>
+nnoremap <C-N> :Lexplore<cr>
 
 " Disable ~ when inside tmux, as Ctrl + PageUp/Down are translated to 5~
 if &term =~ '^screen'
