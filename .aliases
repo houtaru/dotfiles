@@ -13,10 +13,11 @@ alias redis-cli="~/Tools/redis/redis-3.0.6/src/redis-cli"
 
 # Jump to directories
 alias cf="cd /home/caothesan/Documents/code/cp" #; cp ~/.vimrc.min ~/.vimrc"
-alias note="cd /home/caothesan/Documents/code/projects; cp ~/.vimrc.full ~/.vimrc"
+alias note="cd /home/caothesan/Documents/code/projects/ACM-Notebook" #; cp ~/.vimrc.full ~/.vimrc"
 
 # Tmux
-alias tm="cp ~/.vimrc.full ~/.vimrc; tmux -2"
+# alias tm="cp ~/.vimrc.full ~/.vimrc; tmux -2"
+alias tm="tmux -2"
 alias tmkill="tmux kill-session"
 
 # Flush DNS, so that /etc/hosts is reloaded
