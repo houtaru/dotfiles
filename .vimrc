@@ -94,9 +94,10 @@ let g:ycm_use_ultisnips_completer = 1											 " Default 1, just ensure
 let g:ycm_seed_identifiers_with_syntax = 1									" Completion for programming language's keyword
 let g:ycm_complete_in_comments = 1													" Completion in comments
 let g:ycm_complete_in_strings = 1													 " Completion in string
+let g:ycm_global_ycm_extra_conf = '~/.vim/.ycm_extra_conf.py' " Add extra configuration
 " Syntastic
 let g:syntastic_cpp_compiler = 'g++-4.9'
-let g:syntastic_cpp_compiler_options = ' -std=c++11'
+let g:syntastic_cpp_compiler_options = ' -std=c++14'
 let g:syntastic_disabled_filetypes=['markdown'] " Disable for markdown files
 " Ignore some rules broken by Garena codebase
 let g:syntastic_python_flake8_args = "--ignore=W191,W293,E101,E126,E127,E128,E221,E226,E227,E228,E231,E241,E261,E262,E265,E272,E301,E302,E501"
@@ -222,8 +223,11 @@ function! CPPSET()
 	set makeprg=if\ \[\ -f\ \"Makefile\"\ \];then\ make\ $*;else\ if\ \[\ -f\ \"makefile\"\ \];then\ make\ $*;else\ g++\ -std=gnu++0x\ -O2\ -g\ -Wall\ -Wextra\ -o\ %<\ %;fi;fi
 	set cindent
 	set nowrap
-	nnoremap <buffer> <F9> :w<cr>:!g++ -O2 % -o %< -std=c++11 -I ./<cr>:!./%<<cr>
-	nnoremap <buffer> <F8> :w<cr>:!g++ -Wall -Wextra -Wshadow -O2 % -o %< -std=c++11 -I ./<cr>
+  set tabstop=2
+  set softtabstop=2
+  set shiftwidth=2
+	nnoremap <buffer> <F9> :w<cr>:!g++ -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
+	nnoremap <buffer> <F8> :w<cr>:!g++ -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
 
 " Java
@@ -314,6 +318,8 @@ autocmd FileType python     call PYSET()
 autocmd FileType ruby       call RUBYSET()
 autocmd FileType sql        call SQLSET()
 au BufRead,BufNewFile *.handlebars,*.hbs set ft=html syntax=handlebars
+autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
+autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
 " }}}
 
 nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
