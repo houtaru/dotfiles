@@ -16,9 +16,8 @@ Plug 'tpope/vim-repeat'
 Plug 'mileszs/ack.vim'
 Plug 'jiangmiao/auto-pairs'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
-Plug 'dense-analysis/ale'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'" themes
+Plug 'junegunn/fzf.vim'
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 
@@ -54,12 +53,8 @@ function! AirlineInit()
   let g:airline_left_alt_sep= ''
   let g:airline_right_sep = ''
   let g:airline_right_alt_sep = ''
-  let g:airline_section_a = airline#section#create(['mode'])
-  let g:airline_section_b = airline#section#create(['%f'])
-  let g:airline_section_c = airline#section#create([''])
-  let g:airline_section_x = airline#section#create_right([''])
-  let g:airline_section_y = airline#section#create_right([''])
-  let g:airline_section_z = airline#section#create_right(['%l %c'])
+  let g:airline_symbols.linenr = ' '
+  let g:airline_symbols.colnr = ' '
   AirlineToggleWhitespace
   AirlineTheme jellybeans
 endfunction
@@ -81,22 +76,18 @@ color jellybeans	" set background=dark for other machine, but use jellybeans in 
 " }}
 
 " coc.nvim {{
-function! s:show_documentation()
-  if (index(['vim','help'], &filetype) >= 0)
-    execute 'h '.expand('<cword>')
-  elseif (coc#rpc#ready())
-    call CocActionAsync('doHover')
-  else
-    execute '!' . &keywordprg . " " . expand('<cword>')
-  endif
-endfunction
-
 function! CheckBackspace() abort
   let col = col('.') - 1
   return !col || getline('.')[col - 1]  =~# '\s'
 endfunction
 
-set updatetime=300
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+  else
+    call feedkeys('K', 'in')
+  endif
+endfunction
 
 " Use tab for trigger completion with characters ahead and navigate
 " NOTE: There's always complete item selected by default, you may want to enable
@@ -113,56 +104,61 @@ inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
 " <C-g>u breaks current undo, please make your own choice
 inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
 " Use <c-space> to trigger completion
 if has('nvim')
   inoremap <silent><expr> <c-space> coc#refresh()
 else
   inoremap <silent><expr> <c-@> coc#refresh()
 endif
+
 " GoTo code navigation
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
-nnoremap <silent> K :call <SID>show_documentation()<CR>
+" Use K to show documentation in preview window
+nnoremap <silent> K :call ShowDocumentation()<CR>
 
 " Highlight the symbol and its references when holding the cursor
 autocmd CursorHold * silent call CocActionAsync('highlight')
-" }}
 
-" ale {{
-nnoremap <leader>f :ALEFix<CR>
-nnoremap <leader>l :ALEToggle<CR>
-nmap <silent> <leader>n <Plug>(ale_next_wrap)
-nmap <silent> <leader>N <Plug>(ale_previous_wrap)
+" Symbol renaming
+nmap <leader>rn <Plug>(coc-rename)
+
+" Navigate diagnostics
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
+
 " }}
 
 " fzf {{
-nnoremap <silent> <C-P> :Files<cr>
+nnoremap <silent> <C-P> :Files!<CR><cr>
 " }}
 
 " }}}
 
 " -----------------------------------------------------------------------------
-" Stuffs that should be set by default: {{{
+" Default vim variables: {{{
 let mapleader=","
 
+set nocompatible	" use new features whenever they are available
+
 syntax on
+filetype on
 filetype plugin indent on
-set nocompatible
-filetype off
 set encoding=utf-8
+set nu						" show line number
+set autoindent
+set shiftwidth=4
 set softtabstop=4
 set tabstop=4
 set expandtab
-set shiftwidth=4
-set nocompatible	" use new features whenever they are available
+
 set bs=2					" backspace should work as we expect
-set autoindent
 set history=50		" remember last 50 commands
 set ruler				  " show cursor position in bottom line
-set nu						" show line number
 set hlsearch			" highlight search result
 " y and d put stuff into system clipboard (so that other apps can see it)
 set clipboard=unnamed,unnamedplus
@@ -175,17 +171,6 @@ set splitright
 set autoread
 set foldmethod=indent
 set foldlevel=20
-" }}}
-
-" Shortcuts
-
-" Tab related stuffs: {{{
-"set tabstop=4
-"set shiftwidth=4	" tab size = 4
-"set noexpandtab
-"set autoindent
-"set softtabstop=4
-"set shiftround		" when shifting non-aligned set of lines, align them to next tabstop
 " }}}
 
 " Misc {{{
@@ -203,6 +188,7 @@ set timeoutlen=1200
 " Display related: {{{
 set display+=lastline " Show everything you can in the last line (intead of stupid @@@)
 set display+=uhex		 " Show chars that cannot be displayed as <13> instead of ^M
+set colorcolumn=80
 " }}}
 
 " Searching {{{
@@ -211,25 +197,19 @@ set ignorecase		" default should ignore case
 set smartcase		 " use case sensitive if I use uppercase
 " }}}
 
+" Shortcuts
+
+nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
+nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
+nnoremap <C-N> :Lexplore<cr>
+
 " -----------------------------------------------------------------------------
 " Specific settings for specific filetypes:	{{{
 
 " usual policy: if there is a Makefile present, :mak calls make, otherwise we define a command to compile the filetype
 
 " C/C++:
-function! CSET()
-  set makeprg=if\ \[\ -f\ \"Makefile\"\ \];then\ make\ $*;else\ if\ \[\ -f\ \"makefile\"\ \];then\ make\ $*;else\ gcc\ -O2\ -g\ -Wall\ -Wextra\ -o%.bin\ %\ -lm;fi;fi
-  set cindent
-  set nowrap
-endfunction
-
 function! CPPSET()
-  set makeprg=if\ \[\ -f\ \"Makefile\"\ \];then\ make\ $*;else\ if\ \[\ -f\ \"makefile\"\ \];then\ make\ $*;else\ g++\ -std=gnu++0x\ -O2\ -g\ -Wall\ -Wextra\ -o\ %<\ %;fi;fi
-  set cindent
-  set nowrap
-  set tabstop=2
-  set softtabstop=2
-  set shiftwidth=2
   nnoremap <buffer> <F9> :w<cr>:!g++-9 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
   nnoremap <buffer> <F8> :w<cr>:!g++-9 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
@@ -251,61 +231,6 @@ function! VIMSET()
   set shiftwidth=2
 endfunction
 
-" Makefile
-function! MAKEFILESET()
-  set nowrap
-  " in a Makefile we need to use <Tab> to actually produce tabs
-  set noexpandtab
-  set softtabstop=8
-  iunmap <Tab>
-endfunction
-
-" Python
-function! PYSET()
-  if exists('g:no_pyset')
-    return
-  endif
-  set nowrap
-
-  set autoindent
-  set expandtab
-  set shiftwidth=4
-  set tabstop=4
-  nnoremap <buffer> <F9> :w<cr>:exec '!clear;python' shellescape(@%, 1)<cr>
-  " Docstring should be highlighted as comment
-  syn region pythonDocstring	start=+^\s*[uU]\?[rR]\?"""+ end=+"""+ keepend excludenl contains=pythonEscape,@Spell,pythonDoctest,pythonDocTest2,pythonSpaceError
-  syn region pythonDocstring	start=+^\s*[uU]\?[rR]\?'''+ end=+'''+ keepend excludenl contains=pythonEscape,@Spell,pythonDoctest,pythonDocTest2,pythonSpaceError
-  hi	link	 pythonDocstring	Comment
-endfunction
-
-" Ruby
-function! RUBYSET()
-  set autoindent!
-  set noexpandtab!
-  set tabstop=2
-  set softtabstop=2
-  set shiftwidth=2
-  set expandtab
-
-  " I prefer using same highlight for Ruby string and Ruby symbol
-  "	hi clear rubySymbol
-  "	hi link	rubySymbol String
-
-  " Some simple highlight for Capybara
-  syn keyword rubyRailsTestMethod feature scenario before after
-  hi link rubyRailsTestMethod Function
-
-  nnoremap <buffer> <F9> :w<cr>:exec '!clear;ruby' shellescape(@%, 1)<cr>
-  nnoremap <buffer> <F8> :w<cr>:exec '!clear;rspec' shellescape(@%, 1)<cr>
-endfunction
-
-
-" SQL
-function! SQLSET()
-  syn keyword sqlStatement use describe
-  nnoremap <buffer> <F9> :!clear;mysql -u root -p test < %<cr>
-endfunction
-
 " Rust
 function! RUSTSET()
   set nowrap
@@ -322,23 +247,13 @@ endfunction
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
 autocmd FileType rust       call RUSTSET()
 autocmd FileType vim        call VIMSET()
-autocmd FileType c          call CSET()
 autocmd FileType C          call CPPSET()
 autocmd FileType cc         call CPPSET()
 autocmd FileType cpp        call CPPSET()
 autocmd FileType java       call JAVASET()
-autocmd FileType make       call MAKEFILESET()
-autocmd FileType python     call PYSET()
-autocmd FileType ruby       call RUBYSET()
-autocmd FileType sql        call SQLSET()
-au BufRead,BufNewFile *.handlebars,*.hbs set ft=html syntax=handlebars
 autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
 autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
 " }}}
-
-nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
-nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
-nnoremap <C-N> :Lexplore<cr>
 
 " Disable ~ when inside tmux, as Ctrl + PageUp/Down are translated to 5~
 if &term =~ '^screen'
@@ -353,3 +268,4 @@ autocmd VimLeave * call system("tmux rename-window bash")
 hi Normal ctermbg=none
 hi LineNr ctermbg=none
 hi NonText ctermbg=none
+
