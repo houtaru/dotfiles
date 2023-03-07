@@ -253,6 +253,23 @@ autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
 autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
 " }}}
 
+" {{{ Copyright
+function! CreateCopyRightSignature(filename)
+  if &filetype != "cpp" && &filetype != "c"
+    return
+  endif
+
+  exec "0r ~/.vim/za_copyright.txt"
+  execute ":%s/<year>/" . strftime("%Y") . "/"
+  execute ":%s/<filename>/" . expand("%:t") . "/"
+  execute ":%s/<current_dttm>/" . strftime("%c") . "/"
+  normal! gg
+  execute "normal! G"
+endfunction
+
+autocmd BufNewFile /data/git/zbe/* call CreateCopyRightSignature(expand('%'))
+" }}}
+
 " Disable ~ when inside tmux, as Ctrl + PageUp/Down are translated to 5~
 if &term =~ '^screen'
   map ~ <Nop>
