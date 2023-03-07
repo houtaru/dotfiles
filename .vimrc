@@ -8,12 +8,10 @@ endif
 
 call plug#begin("~/.vim/plugged")
 
-Plug 'tpope/vim-surround'
 Plug 'nanotech/jellybeans.vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
-Plug 'mileszs/ack.vim'
 Plug 'jiangmiao/auto-pairs'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
@@ -32,7 +30,7 @@ let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map'
 " Override netrw settings to show line numbers
 let g:netrw_bufsettings = 'noma nomod nu nobl nowrap ro'
 " Set size for the new :Lexplore
-let g:netrw_winsize = 16
+let g:netrw_winsize = 20
 
 " }}
 
@@ -60,15 +58,6 @@ function! AirlineInit()
 endfunction
 autocmd VimEnter * call AirlineInit()
 " }}
-
-" ack.vim {{
-let g:ackprg = 'ag --nogroup --nocolor --column --ignore ENV/'
-let g:ackhighlight = 1
-cabbrev Ack Ack!
-" }}
-
-set laststatus=2
-set t_Co=256
 
 " jellybeans {{
 set background=dark
@@ -127,6 +116,9 @@ autocmd CursorHold * silent call CocActionAsync('highlight')
 " Symbol renaming
 nmap <leader>rn <Plug>(coc-rename)
 
+" Find symbol of current document
+nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
+
 " Navigate diagnostics
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
 nmap <silent> ]g <Plug>(coc-diagnostic-next)
@@ -180,6 +172,8 @@ set pastetoggle=<F10>
 set showcmd
 set timeout			 " adjust timeout for mapped commands
 set timeoutlen=1200
+set updatetime=300
+set signcolumn=yes
 
 " set visualbell		" Tell vim to shutup
 " set noerrorbells	" Tell vim to shutup!
@@ -189,6 +183,8 @@ set timeoutlen=1200
 set display+=lastline " Show everything you can in the last line (intead of stupid @@@)
 set display+=uhex		 " Show chars that cannot be displayed as <13> instead of ^M
 set colorcolumn=80
+set laststatus=2
+set t_Co=256
 " }}}
 
 " Searching {{{
@@ -199,6 +195,7 @@ set smartcase		 " use case sensitive if I use uppercase
 
 " Shortcuts
 
+nnoremap <leader>yf :let @+=expand("%:p") <CR>
 nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <C-N> :Lexplore<cr>
@@ -210,6 +207,7 @@ nnoremap <C-N> :Lexplore<cr>
 
 " C/C++:
 function! CPPSET()
+  set noexpandtab
   nnoremap <buffer> <F9> :w<cr>:!g++-9 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
   nnoremap <buffer> <F8> :w<cr>:!g++-9 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
