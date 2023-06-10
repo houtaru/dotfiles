@@ -8,15 +8,17 @@ endif
 
 call plug#begin("~/.vim/plugged")
 
-Plug 'nanotech/jellybeans.vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-surround'
 Plug 'jiangmiao/auto-pairs'
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'sheerun/vim-polyglot'
+Plug 'dense-analysis/ale'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'bling/vim-airline'
+Plug 'nanotech/jellybeans.vim'
 Plug 'vim-airline/vim-airline-themes'
 
 call plug#end()
@@ -64,68 +66,38 @@ set background=dark
 color jellybeans	" set background=dark for other machine, but use jellybeans in my computer
 " }}
 
-" coc.nvim {{
-function! CheckBackspace() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
+" vim-polyglot {{
+let g:polyglot_disabled = ['ftdetect']
+let g:cpp_attributes_highlight = 1
+let g:cpp_member_highlight = 1
+let g:cpp_simple_highlight = 1
+" }}
 
-function! ShowDocumentation()
-  if CocAction('hasProvider', 'hover')
-    call CocActionAsync('doHover')
-  else
-    call feedkeys('K', 'in')
-  endif
-endfunction
+" ale {{
+set omnifunc=ale#completion#OmniFunc
+set completeopt=menu,menuone,preview,noselect,noinsert
 
-" Use tab for trigger completion with characters ahead and navigate
-" NOTE: There's always complete item selected by default, you may want to enable
-" no select by `"suggest.noselect": true` in your configuration file
-" NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
-" other plugin before putting this into your config
-inoremap <silent><expr> <TAB>
-      \ coc#pum#visible() ? coc#pum#next(1) :
-      \ CheckBackspace() ? "\<Tab>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+let g:ale_floating_preview=1
+let g:ale_completion_enabled=1
+let g:ale_completion_autoimport=0
+let g:ale_c_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
 
-" Make <CR> to accept selected completion item or notify coc.nvim to format
-" <C-g>u breaks current undo, please make your own choice
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+nnoremap <silent> K <Plug>(ale_hover)
+imap <silent> <C-Space> <Plug>(ale_complete)
+nmap <silent> gd <Plug>(ale_go_to_definition)
+nmap <silent> gy <Plug>(ale_go_to_type_definition)
+nmap <silent> gi <Plug>(ale_go_to_implementation)
+nmap <silent> gr <Plug>(ale_find_references)
 
-" Use <c-space> to trigger completion
-if has('nvim')
-  inoremap <silent><expr> <c-space> coc#refresh()
-else
-  inoremap <silent><expr> <c-@> coc#refresh()
-endif
-
-" GoTo code navigation
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-
-" Use K to show documentation in preview window
-nnoremap <silent> K :call ShowDocumentation()<CR>
-
-" Highlight the symbol and its references when holding the cursor
-autocmd CursorHold * silent call CocActionAsync('highlight')
-
-" Symbol renaming
-nmap <leader>rn <Plug>(coc-rename)
-
-" Find symbol of current document
-nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
-
-" Navigate diagnostics
-nmap <silent> [g <Plug>(coc-diagnostic-prev)
-nmap <silent> ]g <Plug>(coc-diagnostic-next)
+nmap <silent> [g <Plug>(ale_previous_wrap_error)
+nmap <silent> g] <Plug>(ale_next_wrap_error)
+nmap <silent> [w <Plug>(ale_previous_wrap_warning)
+nmap <silent> w] <Plug>(ale_next_wrap_warning)
 
 " }}
 
 " fzf {{
+cabbrev rg Rg
 nnoremap <silent> <C-P> :Files!<CR><cr>
 " }}
 
@@ -146,7 +118,7 @@ set autoindent
 set shiftwidth=4
 set softtabstop=4
 set tabstop=4
-set expandtab
+set noexpandtab
 
 set bs=2					" backspace should work as we expect
 set history=50		" remember last 50 commands
@@ -165,6 +137,14 @@ set foldmethod=indent
 set foldlevel=20
 " }}}
 
+" coc.nvim {{{
+" Some servers have issues with backup files, see #649
+set updatetime=200
+set nobackup
+set nowritebackup
+set signcolumn=yes
+" }}}
+
 " Misc {{{
 set autoread			" auto re-read changes outside vim
 set autowrite		 " auto save before make/execute
@@ -172,8 +152,6 @@ set pastetoggle=<F10>
 set showcmd
 set timeout			 " adjust timeout for mapped commands
 set timeoutlen=1200
-set updatetime=300
-set signcolumn=yes
 
 " set visualbell		" Tell vim to shutup
 " set noerrorbells	" Tell vim to shutup!
@@ -191,6 +169,10 @@ set t_Co=256
 set incsearch		 " show first match when start typing
 set ignorecase		" default should ignore case
 set smartcase		 " use case sensitive if I use uppercase
+" }}}
+
+" {{{ jumping
+set switchbuf=useopen,usetab
 " }}}
 
 " Shortcuts
@@ -245,12 +227,10 @@ endfunction
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
 autocmd FileType rust       call RUSTSET()
 autocmd FileType vim        call VIMSET()
-autocmd FileType C          call CPPSET()
-autocmd FileType cc         call CPPSET()
-autocmd FileType cpp        call CPPSET()
+autocmd FileType c,cc,cpp   call CPPSET()
 autocmd FileType java       call JAVASET()
-autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
-autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
+"autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
+"autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
 " }}}
 
 " {{{ Copyright
