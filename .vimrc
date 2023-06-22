@@ -12,7 +12,6 @@ Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
-Plug 'jiangmiao/auto-pairs'
 Plug 'sheerun/vim-polyglot'
 Plug 'dense-analysis/ale'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
@@ -27,8 +26,8 @@ call plug#end()
 " Plugin settings: {{{
 
 " netrw {{
-" Hide .swp, .pyc, ENV/, .git/, *.map
-let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map'
+" Hide .swp, .pyc, ENV/, .git/, *.map, *.plist
+let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map,.*\.plist$'
 " Override netrw settings to show line numbers
 let g:netrw_bufsettings = 'noma nomod nu nobl nowrap ro'
 " Set size for the new :Lexplore
@@ -66,13 +65,6 @@ set background=dark
 color jellybeans	" set background=dark for other machine, but use jellybeans in my computer
 " }}
 
-" vim-polyglot {{
-let g:polyglot_disabled = ['ftdetect']
-let g:cpp_attributes_highlight = 1
-let g:cpp_member_highlight = 1
-let g:cpp_simple_highlight = 1
-" }}
-
 " ale {{
 set omnifunc=ale#completion#OmniFunc
 set completeopt=menu,menuone,preview,noselect,noinsert
@@ -80,7 +72,8 @@ set completeopt=menu,menuone,preview,noselect,noinsert
 let g:ale_floating_preview=1
 let g:ale_completion_enabled=1
 let g:ale_completion_autoimport=0
-let g:ale_c_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
+let g:ale_cpp_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
+let g:ale_cpp_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
 
 nnoremap <silent> K <Plug>(ale_hover)
 imap <silent> <C-Space> <Plug>(ale_complete)
@@ -90,9 +83,9 @@ nmap <silent> gi <Plug>(ale_go_to_implementation)
 nmap <silent> gr <Plug>(ale_find_references)
 
 nmap <silent> [g <Plug>(ale_previous_wrap_error)
-nmap <silent> g] <Plug>(ale_next_wrap_error)
+nmap <silent> ]g <Plug>(ale_next_wrap_error)
 nmap <silent> [w <Plug>(ale_previous_wrap_warning)
-nmap <silent> w] <Plug>(ale_next_wrap_warning)
+nmap <silent> ]w <Plug>(ale_next_wrap_warning)
 
 " }}
 
@@ -182,6 +175,10 @@ nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <C-N> :Lexplore<cr>
 
+inoremap {<cr> {<cr><cr>}<up><tab>
+"set list
+"set listchars=tab:>-
+
 " -----------------------------------------------------------------------------
 " Specific settings for specific filetypes:	{{{
 
@@ -229,8 +226,6 @@ autocmd FileType rust       call RUSTSET()
 autocmd FileType vim        call VIMSET()
 autocmd FileType c,cc,cpp   call CPPSET()
 autocmd FileType java       call JAVASET()
-"autocmd BufRead,BufNewFile *.md setlocal spell spelllang=en_us
-"autocmd BufRead,BufNewFile *.txt setlocal spell spelllang=en_us
 " }}}
 
 " {{{ Copyright
