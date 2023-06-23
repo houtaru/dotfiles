@@ -113,9 +113,9 @@ set softtabstop=4
 set tabstop=4
 set noexpandtab
 
-set bs=2					" backspace should work as we expect
-set history=50		" remember last 50 commands
-set ruler				  " show cursor position in bottom line
+set bs=2				" backspace should work as we expect
+set history=50			" remember last 50 commands
+set ruler				" show cursor position in bottom line
 set hlsearch			" highlight search result
 " y and d put stuff into system clipboard (so that other apps can see it)
 set clipboard=unnamed,unnamedplus
@@ -124,44 +124,36 @@ set textwidth=0
 " Open new split to right / bottom
 set splitbelow
 set splitright
-" Automatically update changed files (but need to focus on the file)
-set autoread
 set foldmethod=indent
 set foldlevel=20
-" }}}
-
-" coc.nvim {{{
-" Some servers have issues with backup files, see #649
-set updatetime=200
-set nobackup
-set nowritebackup
-set signcolumn=yes
+nnoremap Q <Nop>
 " }}}
 
 " Misc {{{
 set autoread			" auto re-read changes outside vim
-set autowrite		 " auto save before make/execute
+set autowrite			" auto save before make/execute
 set pastetoggle=<F10>
 set showcmd
 set timeout			 " adjust timeout for mapped commands
 set timeoutlen=1200
 
-" set visualbell		" Tell vim to shutup
-" set noerrorbells	" Tell vim to shutup!
+set visualbell
+set noerrorbells
 " }}}
 
 " Display related: {{{
-set display+=lastline " Show everything you can in the last line (intead of stupid @@@)
-set display+=uhex		 " Show chars that cannot be displayed as <13> instead of ^M
+set display+=lastline   " Show everything you can in the last line (intead of stupid @@@)
+set display+=uhex	    " Show chars that cannot be displayed as <13> instead of ^M
 set colorcolumn=80
-set laststatus=2
-set t_Co=256
+set listchars=lead:\ ,trail:·,tab:\|·
+set listchars=eol:¬,space:·,lead:\ ,trail:·,nbsp:◇,tab:→-,extends:▸,precedes:◂,multispace:···⬝,leadmultispace:\│\ \ \ ,
+set list
 " }}}
 
 " Searching {{{
-set incsearch		 " show first match when start typing
+set incsearch		" show first match when start typing
 set ignorecase		" default should ignore case
-set smartcase		 " use case sensitive if I use uppercase
+set smartcase		" use case sensitive if I use uppercase
 " }}}
 
 " {{{ jumping
@@ -176,8 +168,6 @@ nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
 nnoremap <C-N> :Lexplore<cr>
 
 inoremap {<cr> {<cr><cr>}<up><tab>
-"set list
-"set listchars=tab:>-
 
 " -----------------------------------------------------------------------------
 " Specific settings for specific filetypes:	{{{
@@ -228,22 +218,6 @@ autocmd FileType c,cc,cpp   call CPPSET()
 autocmd FileType java       call JAVASET()
 " }}}
 
-" {{{ Copyright
-function! CreateCopyRightSignature(filename)
-  if &filetype != "cpp" && &filetype != "c"
-    return
-  endif
-
-  exec "0r ~/.vim/za_copyright.txt"
-  execute ":%s/<year>/" . strftime("%Y") . "/"
-  execute ":%s/<filename>/" . expand("%:t") . "/"
-  execute ":%s/<current_dttm>/" . strftime("%c") . "/"
-  normal! gg
-  execute "normal! G"
-endfunction
-
-autocmd BufNewFile /data/git/zbe/* call CreateCopyRightSignature(expand('%'))
-" }}}
 
 " Disable ~ when inside tmux, as Ctrl + PageUp/Down are translated to 5~
 if &term =~ '^screen'
@@ -258,4 +232,5 @@ autocmd VimLeave * call system("tmux rename-window bash")
 hi Normal ctermbg=none
 hi LineNr ctermbg=none
 hi NonText ctermbg=none
+hi SpecialKey ctermbg=none
 
