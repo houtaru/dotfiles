@@ -13,7 +13,7 @@ Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
 Plug 'sheerun/vim-polyglot'
-Plug 'dense-analysis/ale'
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'bling/vim-airline'
@@ -65,33 +65,70 @@ set background=dark
 color jellybeans	" set background=dark for other machine, but use jellybeans in my computer
 " }}
 
-" ale {{
-set omnifunc=ale#completion#OmniFunc
-set completeopt=menu,menuone,preview,noselect,noinsert
-
-let g:ale_floating_preview=1
-let g:ale_completion_enabled=1
-let g:ale_completion_autoimport=0
-let g:ale_cpp_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
-let g:ale_cpp_clangd_options='--background-index -j=8 -malloc-trim -pch-storage=memory -header-insertion=never --all-scopes-completion'
-
-nnoremap <silent> K <Plug>(ale_hover)
-imap <silent> <C-Space> <Plug>(ale_complete)
-nmap <silent> gd <Plug>(ale_go_to_definition)
-nmap <silent> gy <Plug>(ale_go_to_type_definition)
-nmap <silent> gi <Plug>(ale_go_to_implementation)
-nmap <silent> gr <Plug>(ale_find_references)
-
-nmap <silent> [g <Plug>(ale_previous_wrap_error)
-nmap <silent> ]g <Plug>(ale_next_wrap_error)
-nmap <silent> [w <Plug>(ale_previous_wrap_warning)
-nmap <silent> ]w <Plug>(ale_next_wrap_warning)
-
-" }}
-
 " fzf {{
 cabbrev rg Rg
 nnoremap <silent> <C-P> :Files!<CR><cr>
+" }}
+
+" coc.nvim {{
+set nobackup              " Some servers have issues with backup files
+set nowritebackup
+set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
+set signcolumn=yes        " Always show the signcolumn, otherwise it would shift the text each time diagnostics appear/become resolved
+set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}   " add statusline 
+
+" tab completion
+function! CheckBackspace() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
+
+" jump to next suggestion
+inoremap <silent><expr> <TAB>
+      \ coc#pum#visible() ? coc#pum#next(1) :
+      \ CheckBackspace() ? "\<Tab>" :
+      \ coc#refresh()
+" jump to previous suggestion
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+" accept selection
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+" trigger completion
+noremap <silent><expr> <c-@> coc#refresh()    
+
+" diagnostic
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
+
+" navigation
+nmap <silent> gd <Plug>(coc-definition)
+nmap <silent> gy <Plug>(coc-type-definition)
+nmap <silent> gi <Plug>(coc-implementation)
+nmap <silent> gr <Plug>(coc-references)
+
+" show review window
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+  else
+    call feedkeys('K', 'in')
+  endif
+endfunction
+nnoremap <silent> K :call ShowDocumentation()<CR>
+
+" Highlight the symbol and its references when holding the cursor
+autocmd CursorHold * silent call CocActionAsync('highlight')
+
+" Remap <C-f> and <C-b> to scroll float windows/popups
+if has('nvim-0.4.0') || has('patch-8.2.0750')
+  nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+  nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+  inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
+  inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
+  vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+  vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+endif
+
 " }}
 
 " }}}
@@ -126,6 +163,7 @@ set splitbelow
 set splitright
 set foldmethod=indent
 set foldlevel=20
+
 nnoremap Q <Nop>
 " }}}
 
@@ -209,6 +247,8 @@ function! RUSTSET()
   nnoremap <buffer> <F9> :w<cr>:!rustc % <cr>:!./%<<cr>
 endfunction
 
+" Beautify JSON
+nmap =j :%!python -m json.tool<CR>
 
 " Autocommands for all languages:
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
@@ -217,7 +257,6 @@ autocmd FileType vim        call VIMSET()
 autocmd FileType c,cc,cpp   call CPPSET()
 autocmd FileType java       call JAVASET()
 " }}}
-
 
 " Disable ~ when inside tmux, as Ctrl + PageUp/Down are translated to 5~
 if &term =~ '^screen'
