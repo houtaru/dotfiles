@@ -1,30 +1,25 @@
-#!/bin/bash
-
 # Show where I'm copying
 alias cp="cp -v"
 alias mv="mv -v"
 alias rm="rm -v"
-alias ls="ls --color=auto"
-
-# Shortcuts
-alias g="git"
-alias backupvim="cp ~/.vimrc ~/.vimrc.full; cp ~/.vimrc ~/.vimrc.full.backup"
-alias incstack="ulimit -s unlimited"
-alias redis-cli="~/Tools/redis/redis-3.0.6/src/redis-cli"
+alias ls="ls --color=auto -I \"*.plist\""
+alias drag="dragon -a"
+alias copy="xclip -selection clipboard"
 
 # Always enable colored `grep` output
 # Note: `GREP_OPTIONS="--color=auto"` is deprecated, hence the alias usage.
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
+alias -g J='-J zbe@10.30.22.114'
+alias -g F='-F zbe@10.30.22.114'
 
-# Jump to directories
-alias cf="cd /home/caothesan/Documents/code/cp" #; cp ~/.vimrc.min ~/.vimrc"
-alias note="cd /home/caothesan/Documents/code/projects/ACM-Notebook" #; cp ~/.vimrc.full ~/.vimrc"
-alias cs="cd /home/caothesan/Documents/code/courses/"
+# work
+#alias run-project='build-project run'
+#alias sync-project='build-project sync'
+#alias work='cd /data/git/zbe'
 
 # Tmux
-# alias tm="cp ~/.vimrc.full ~/.vimrc; tmux -2"
 alias tm="tmux -2"
 alias tmkill="tmux kill-session"
 
@@ -47,18 +42,9 @@ function update_release {
     g stash pop;
 }
 alias release=update_release
-# live IPs:
-# Backend:
-# 122.11.129.30
-# 122.11.129.4
-#
-# Webapi
-# 122.11.129.5
-# 122.11.129.9
-# 203.117.172.187
-# 122.11.129.38
 
 alias proto='protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_db.proto; protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_cmd.proto;'
+
 alias bproto='protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_db.proto; protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_cmd.proto; protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_mq.proto; protoc -I=bridge/protofile/ --python_out=bridge/protobuf/pb/ bridge/protofile/beeshop_search.proto;'
 kill80() {
 	sudo lsof -i :80 | grep 'apache2' | awk '{ print $2 }' | xargs sudo kill -9
