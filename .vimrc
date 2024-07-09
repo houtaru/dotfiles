@@ -19,6 +19,7 @@ Plug 'junegunn/fzf.vim'
 Plug 'bling/vim-airline'
 Plug 'nanotech/jellybeans.vim'
 Plug 'vim-airline/vim-airline-themes'
+Plug 'christoomey/vim-tmux-navigator'
 
 call plug#end()
 " }}}
@@ -66,6 +67,7 @@ color jellybeans	" set background=dark for other machine, but use jellybeans in 
 " }}
 
 " fzf {{
+cabbrev git Git
 cabbrev rg Rg
 nnoremap <silent> <C-P> :Files!<CR><cr>
 " }}
@@ -75,7 +77,7 @@ set nobackup              " Some servers have issues with backup files
 set nowritebackup
 set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
 set signcolumn=yes        " Always show the signcolumn, otherwise it would shift the text each time diagnostics appear/become resolved
-set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}   " add statusline 
+set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}   " add statusline
 
 " tab completion
 function! CheckBackspace() abort
@@ -94,7 +96,7 @@ inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
 inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 " trigger completion
-noremap <silent><expr> <c-@> coc#refresh()    
+noremap <silent><expr> <c-@> coc#refresh()
 
 " diagnostic
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
@@ -128,6 +130,9 @@ if has('nvim-0.4.0') || has('patch-8.2.0750')
   vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
   vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
 endif
+
+" Find symbol of current document
+nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
 
 " }}
 
@@ -183,8 +188,7 @@ set noerrorbells
 set display+=lastline   " Show everything you can in the last line (intead of stupid @@@)
 set display+=uhex	    " Show chars that cannot be displayed as <13> instead of ^M
 set colorcolumn=80
-set listchars=lead:\ ,trail:·,tab:\|·
-set listchars=eol:¬,space:·,lead:\ ,trail:·,nbsp:◇,tab:→-,extends:▸,precedes:◂,multispace:···⬝,leadmultispace:\│\ \ \ ,
+set listchars=eol:¬,space:\ ,lead:\ ,trail:·,nbsp:◇,tab:→-,extends:▸,precedes:◂,multispace:···⬝,leadmultispace:\│\ \ \ ,
 set list
 " }}}
 
@@ -207,6 +211,10 @@ nnoremap <C-N> :Lexplore<cr>
 
 inoremap {<cr> {<cr><cr>}<up><tab>
 
+" {{ command alias
+cabbrev now put =strftime('%Y/%m/%d %H:%M')
+" }}
+
 " -----------------------------------------------------------------------------
 " Specific settings for specific filetypes:	{{{
 
@@ -215,8 +223,8 @@ inoremap {<cr> {<cr><cr>}<up><tab>
 " C/C++:
 function! CPPSET()
   set noexpandtab
-  nnoremap <buffer> <F9> :w<cr>:!g++-9 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
-  nnoremap <buffer> <F8> :w<cr>:!g++-9 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
+  nnoremap <buffer> <F9> :w<cr>:!g++-11 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
+  nnoremap <buffer> <F8> :w<cr>:!g++-11 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
 
 " Java
@@ -250,6 +258,9 @@ endfunction
 " Beautify JSON
 nmap =j :%!python -m json.tool<CR>
 
+" Remove trailing spaces
+autocmd BufWritePre * :%s/\s\+$//e
+
 " Autocommands for all languages:
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
 autocmd FileType rust       call RUSTSET()
@@ -264,8 +275,8 @@ if &term =~ '^screen'
 endif
 
 " Show filename in tmux panel
-autocmd BufEnter,BufReadPost,FileReadPost,BufNewFile * call system("tmux rename-window " . expand('%'))
-autocmd VimLeave * call system("tmux rename-window bash")
+"autocmd BufEnter,BufReadPost,FileReadPost,BufNewFile * call system("tmux rename-window " . expand('%'))
+"autocmd VimLeave * call system("tmux rename-window bash")
 
 " Hack to make bg black with jellybeans
 hi Normal ctermbg=none
