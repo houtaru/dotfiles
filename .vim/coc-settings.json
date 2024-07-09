@@ -1,15 +1,15 @@
 {
 	"coc.preferences.jumpCommand": "drop",
-    "clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/17.0.3/clangd_17.0.3/bin/clangd",
-    "clangd.arguments": [
-        "--background-index",
-        "-j=6",
-        "--malloc-trim",
-        "--pch-storage=memory",
-        "--header-insertion=never",
+	"clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/17.0.3/clangd_17.0.3/bin/clangd",
+	"clangd.arguments": [
+		"--background-index",
+		"-j=6",
+		"--malloc-trim",
+		"--pch-storage=memory",
+		"--header-insertion=never",
 		"--all-scopes-completion",
 		"--query-driver=/usr/bin/g++"
-    ],
+	],
 	"clangd.compilationDatabaseCandidates": [
 		"${workspaceFolder}"
 	],
