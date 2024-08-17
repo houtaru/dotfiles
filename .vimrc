@@ -9,7 +9,7 @@ endif
 call plug#begin("~/.vim/plugged")
 
 Plug 'airblade/vim-gitgutter'
-Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-fugitive'   
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
 Plug 'sheerun/vim-polyglot'
@@ -66,9 +66,16 @@ set background=dark
 color jellybeans	" set background=dark for other machine, but use jellybeans in my computer
 " }}
 
-" fzf {{
+" git {{
+
 cabbrev git Git
-cabbrev rg Rg
+let g:gitgutter_show_msg_on_hunk_jumping = 0
+nmap ]h <Plug>(GitGutterNextHunk)
+nmap [h <Plug>(GitGutterPrevHunk)
+
+" }}
+
+" fzf {{
 nnoremap <silent> <C-P> :Files!<CR><cr>
 " }}
 
@@ -96,7 +103,7 @@ inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
 inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 " trigger completion
-noremap <silent><expr> <c-@> coc#refresh()
+inoremap <silent><expr> <c-@> coc#refresh()
 
 " diagnostic
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
@@ -134,6 +141,8 @@ endif
 " Find symbol of current document
 nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
 
+" Symbol renaming
+nmap <leader>rn <Plug>(coc-rename)
 " }}
 
 " }}}
@@ -202,17 +211,44 @@ set smartcase		" use case sensitive if I use uppercase
 set switchbuf=useopen,usetab
 " }}}
 
-" Shortcuts
-
+" {{{ Shortcuts
 nnoremap <leader>yf :let @+=expand("%:p") <CR>
-nnoremap <leader>e :e <C-R>=expand("%:p:h") . '/' <CR>
-nnoremap <leader>vs :vs <C-R>=expand("%:p:h") . '/' <CR>
+nnoremap <leader>l :Buffers<CR>
 nnoremap <C-N> :Lexplore<cr>
+" }}}
 
-inoremap {<cr> {<cr><cr>}<up><tab>
+" {{{ Quicklists
+function! s:toggle_quickfix()
+    if empty(filter(getwininfo(), 'v:val.quickfix'))
+        copen
+    else
+        cclose
+    endif
+endfunction
+
+nnoremap <silent> <leader>q :call <sid>toggle_quickfix()<cr>
+nnoremap <expr> <leader>n (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bnext\n" : ":cnext\n")
+nnoremap <expr> <leader>b (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bprev\n" : ":cprev\n")
+
+command! -nargs=? -complete=dir Gr :cexpr
+    \ system("grep -rnI " . shellescape(<q-args>)) | copen
+cabbrev gr Gr
+
+" }}
+
+" }}}
 
 " {{ command alias
 cabbrev now put =strftime('%Y/%m/%d %H:%M')
+
+" }}}
+
+" {{{ auto commands
+augroup numbertogglegroup
+  autocmd!
+  autocmd BufEnter,FocusGained,InsertLeave,WinEnter * if &nu && mode() != "i" | set rnu   | endif
+  autocmd BufLeave,FocusLost,InsertEnter,WinLeave   * if &nu                  | set nornu | endif
+augroup end
 " }}
 
 " -----------------------------------------------------------------------------
@@ -223,6 +259,12 @@ cabbrev now put =strftime('%Y/%m/%d %H:%M')
 " C/C++:
 function! CPPSET()
   set noexpandtab
+  inoremap { {}<Left>
+  inoremap {<CR> {<CR>}<Esc>O
+  inoremap {{ {
+  inoremap {} {}
+  command! -nargs=? -complete=dir Gr :cexpr
+        \ system("grep -rn --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' " . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F9> :w<cr>:!g++-11 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
   nnoremap <buffer> <F8> :w<cr>:!g++-11 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
@@ -232,6 +274,8 @@ function! JAVASET()
   set makeprg=if\ \[\ -f\ \"Makefile\"\ \];then\ make\ $*;else\ if\ \[\ -f\ \"makefile\"\ \];then\ make\ $*;else\ javac\ -g\ %;fi;fi
   set cindent
   set nowrap
+  command! -nargs=? -complete=dir Gr :cexpr
+        \ system("grep -rn --include='*.java' " . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F8> :w<cr>:!javac %<cr>
   nnoremap <buffer> <F9> :w<cr>:!javac %<cr>:!java %< %<cr>
 endfunction
@@ -251,6 +295,8 @@ function! RUSTSET()
   set softtabstop=2
   set shiftwidth=2
 
+  command! -nargs=? -complete=dir Gr :cexpr
+        \ system("grep -rn --include='*.rs' " . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F8> :w<cr>:!rustc % <cr>
   nnoremap <buffer> <F9> :w<cr>:!rustc % <cr>:!./%<<cr>
 endfunction
@@ -259,7 +305,7 @@ endfunction
 nmap =j :%!python -m json.tool<CR>
 
 " Remove trailing spaces
-autocmd BufWritePre * :%s/\s\+$//e
+"autocmd BufWritePre * :%s/\s\+$//e
 
 " Autocommands for all languages:
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
