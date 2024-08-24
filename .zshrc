@@ -81,9 +81,11 @@ plugins=(
     git
     history
     zsh-autosuggestions
-    ubuntu
     zsh-syntax-highlighting
 )
+
+bindkey '^ ' forward-word
+bindkey '^[^M' autosuggest-accept
 
 source $ZSH/oh-my-zsh.sh
 
