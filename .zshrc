@@ -39,9 +39,22 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 autoload -Uz vcs_info
 precmd_vcs_info() { vcs_info }
 precmd_functions+=( precmd_vcs_info )
-zstyle ':vcs_info:git:*' formats '%b %a %m%u%c '
+zstyle ':vcs_info:git:*' formats '%b'
 setopt prompt_subst
-PROMPT='%F{green}%*%f %F{blue}%B%~%b%f %F{green}${vcs_info_msg_0_}%f$ '
+git_status_info() {
+	if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+		return 0
+	fi
+	STAGED=$(git diff --cached --numstat | wc -l)
+	UNSTAGED=$(git diff --numstat | wc -l)
+	UNTRACKED=$(git ls-files --others --exclude-standard | wc -l)
+	ret=" ";
+	[ $STAGED -gt 0 ] && ret+="%{$fg[green]%}+$STAGED%{$reset_color%}"
+	[ $UNSTAGED -gt 0 ] && ret+="%{$fg[yellow]%}~$UNSTAGED%{$reset_color%}"
+	[ $UNTRACKED -gt 0 ] && ret+="%{$fg[blue]%}?$UNTRACKED%{$reset_color%}"
+	echo $ret
+}
+PROMPT='%F{green}%*%f %F{blue}%B%~%b%f %F{green}${vcs_info_msg_0_}%f$(git_status_info) $ '
 plugins=(
     git
     history
@@ -58,6 +71,4 @@ for file in ~/.{path,bash_prompt,exports,aliases,functions,extra}; do
 done;
 unset file;
 
-export NVM_DIR="$HOME/.nvm"
-#[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
