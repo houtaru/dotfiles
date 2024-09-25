@@ -9,9 +9,10 @@ endif
 call plug#begin("~/.vim/plugged")
 
 Plug 'airblade/vim-gitgutter'
-Plug 'tpope/vim-fugitive'   
+Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
 Plug 'sheerun/vim-polyglot'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
@@ -85,6 +86,9 @@ set nowritebackup
 set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
 set signcolumn=yes        " Always show the signcolumn, otherwise it would shift the text each time diagnostics appear/become resolved
 set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}   " add statusline
+let g:coc_node_path="~/.nvm/versions/node/v18.12.1/bin/node"
+
+
 
 " tab completion
 function! CheckBackspace() abort
@@ -213,7 +217,7 @@ set switchbuf=useopen,usetab
 
 " {{{ Shortcuts
 nnoremap <leader>yf :let @+=expand("%:p") <CR>
-nnoremap <leader>l :Buffers<CR>
+nnoremap <leader>e :Buffers<CR>
 nnoremap <C-N> :Lexplore<cr>
 " }}}
 
@@ -259,14 +263,14 @@ augroup end
 " C/C++:
 function! CPPSET()
   set noexpandtab
-  inoremap { {}<Left>
-  inoremap {<CR> {<CR>}<Esc>O
-  inoremap {{ {
-  inoremap {} {}
+"  inoremap { {}<Left>
+"  inoremap {<CR> {<CR>}<Esc>O
+"  inoremap {{ {
+"  inoremap {} {}
   command! -nargs=? -complete=dir Gr :cexpr
-        \ system("grep -rn --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' " . shellescape(<q-args>)) | copen
-  nnoremap <buffer> <F9> :w<cr>:!g++-11 -O2 % -o %< -std=c++14 -I ./<cr>:!./%<<cr>
-  nnoremap <buffer> <F8> :w<cr>:!g++-11 -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
+        \ system("grep -rn --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' --exclude-dir='thrift' --exclude-dir='thriftzg' " . shellescape(<q-args>)) | copen
+  nnoremap <buffer> <F9> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>:!exec %:p:r<cr>
+  nnoremap <buffer> <F8> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
 
 " Java
