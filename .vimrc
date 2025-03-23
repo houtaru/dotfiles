@@ -8,6 +8,7 @@ endif
 
 call plug#begin("~/.vim/plugged")
 
+Plug 'jiangmiao/auto-pairs'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
@@ -77,7 +78,10 @@ nmap [h <Plug>(GitGutterPrevHunk)
 " }}
 
 " fzf {{
-nnoremap <silent> <C-P> :Files!<CR><cr>
+nnoremap <silent> <C-P> :Files!<cr>
+noremap <silent> t] :Tags <C-R><C-W><cr>
+noremap <silent> g] :call fzf#vim#tags(expand('<cword>')) <cr>
+
 " }}
 
 " coc.nvim {{
@@ -86,9 +90,7 @@ set nowritebackup
 set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
 set signcolumn=yes        " Always show the signcolumn, otherwise it would shift the text each time diagnostics appear/become resolved
 set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}   " add statusline
-let g:coc_node_path="~/.nvm/versions/node/v18.12.1/bin/node"
-
-
+set tagfunc=CocTagFunc    " Used C+], C+t to jump back and ford
 
 " tab completion
 function! CheckBackspace() abort
@@ -107,17 +109,33 @@ inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
 inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                               \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 " trigger completion
-inoremap <silent><expr> <c-@> coc#refresh()
+inoremap <silent><expr> <C-@> coc#refresh()
 
 " diagnostic
 nmap <silent> [g <Plug>(coc-diagnostic-prev)
 nmap <silent> ]g <Plug>(coc-diagnostic-next)
 
 " navigation
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
+function! s:DoNavigation(action) 
+  try
+    if CocAction(a:action)
+      return v:true
+    endif
+  catch " do nothing
+  endtry
+  let ret = execute("silent! normal g]>")
+  if ret =~ "Error"
+    call searchdecl(expand('<cword>'))
+  endif
+endfunction
+
+nmap <silent> C-] :call <SID>DoNavigation('jumpDefinition')<cr>
+nmap <silent> gd :call <SID>DoNavigation('jumpDefinition')<cr>
+nmap <silent> gy :call <SID>DoNavigation('jumpTypeDefinition')<cr>
+nmap <silent> gi :call <SID>DoNavigation('jumpImplementation')<cr>
+nmap <silent> gr :call <SID>DoNavigation('jumpReferences')<cr>
+xmap <leader>f  <Plug>(coc-format-selected)
+nmap <leader>f  <Plug>(coc-format-selected)
 
 " show review window
 function! ShowDocumentation()
@@ -147,7 +165,11 @@ nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
 
 " Symbol renaming
 nmap <leader>rn <Plug>(coc-rename)
+" Apply the most preferred quickfix action to fix diagnostic on the current line
+nmap <leader>tf  <Plug>(coc-fix-current)
 " }}
+
+command! -nargs=? -complete=dir CocDiagnosticToggle :call CocAction('diagnosticToggle')
 
 " }}}
 
@@ -181,6 +203,7 @@ set splitbelow
 set splitright
 set foldmethod=indent
 set foldlevel=20
+set diffopt+=followwrap
 
 nnoremap Q <Nop>
 " }}}
@@ -234,9 +257,13 @@ nnoremap <silent> <leader>q :call <sid>toggle_quickfix()<cr>
 nnoremap <expr> <leader>n (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bnext\n" : ":cnext\n")
 nnoremap <expr> <leader>b (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bprev\n" : ":cprev\n")
 
+command! -nargs=? -complete=dir Grep :cexpr
+    \ system("grep -rnI " . shellescape(<q-args>)) | copen
 command! -nargs=? -complete=dir Gr :cexpr
     \ system("grep -rnI " . shellescape(<q-args>)) | copen
+cabbrev grep Grep
 cabbrev gr Gr
+cabbrev grz Grz
 
 " }}
 
@@ -263,12 +290,12 @@ augroup end
 " C/C++:
 function! CPPSET()
   set noexpandtab
-"  inoremap { {}<Left>
-"  inoremap {<CR> {<CR>}<Esc>O
-"  inoremap {{ {
-"  inoremap {} {}
+  " set foldmethod=marker
+  " set foldmarker={,}
   command! -nargs=? -complete=dir Gr :cexpr
-        \ system("grep -rn --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' --exclude-dir='thrift' --exclude-dir='thriftzg' " . shellescape(<q-args>)) | copen
+        \ system("grep -rnI --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' " . shellescape(<q-args>)) | copen
+  command! -nargs=? -complete=dir Grz :cexpr
+        \ system("grep -rnI --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' --exclude-dir='thrift' --exclude-dir='thriftzg' " . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F9> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>:!exec %:p:r<cr>
   nnoremap <buffer> <F8> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
@@ -278,8 +305,10 @@ function! JAVASET()
   set makeprg=if\ \[\ -f\ \"Makefile\"\ \];then\ make\ $*;else\ if\ \[\ -f\ \"makefile\"\ \];then\ make\ $*;else\ javac\ -g\ %;fi;fi
   set cindent
   set nowrap
+  set foldmethod=marker
+  set foldmarker={,}
   command! -nargs=? -complete=dir Gr :cexpr
-        \ system("grep -rn --include='*.java' " . shellescape(<q-args>)) | copen
+        \ system("grep -rnI --include='*.java' " . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F8> :w<cr>:!javac %<cr>
   nnoremap <buffer> <F9> :w<cr>:!javac %<cr>:!java %< %<cr>
 endfunction
@@ -300,7 +329,8 @@ function! RUSTSET()
   set shiftwidth=2
 
   command! -nargs=? -complete=dir Gr :cexpr
-        \ system("grep -rn --include='*.rs' " . shellescape(<q-args>)) | copen
+        \ system("grep -rnI --include='*.rs' " . shellescape(<q-args>)) | copen
+  " set makepgr=cargo
   nnoremap <buffer> <F8> :w<cr>:!rustc % <cr>
   nnoremap <buffer> <F9> :w<cr>:!rustc % <cr>:!./%<<cr>
 endfunction

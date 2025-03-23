@@ -39,22 +39,26 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 autoload -Uz vcs_info
 precmd_vcs_info() { vcs_info }
 precmd_functions+=( precmd_vcs_info )
-zstyle ':vcs_info:git:*' formats '%b'
-setopt prompt_subst
-git_status_info() {
+zstyle ':vcs_info:git:*' formats '%F{green}%b%f %u%c%m'
+zstyle ':vcs_info:git*+set-message:*' hooks git-status
+
++vi-git-status(){
 	if ! git rev-parse --is-inside-work-tree &>/dev/null; then
 		return 0
 	fi
-	STAGED=$(git diff --cached --numstat | wc -l)
-	UNSTAGED=$(git diff --numstat | wc -l)
-	UNTRACKED=$(git ls-files --others --exclude-standard | wc -l)
-	ret=" ";
-	[ $STAGED -gt 0 ] && ret+="%{$fg[green]%}+$STAGED%{$reset_color%}"
-	[ $UNSTAGED -gt 0 ] && ret+="%{$fg[yellow]%}~$UNSTAGED%{$reset_color%}"
-	[ $UNTRACKED -gt 0 ] && ret+="%{$fg[blue]%}?$UNTRACKED%{$reset_color%}"
-	echo $ret
+	staged=$(git diff --cached --numstat | wc -l)
+	unstaged=$(git diff --numstat | wc -l)
+	untracked=$(git ls-files --others --exclude-standard | wc -l)
+	[ $staged -gt 0 ] && hook_com[staged]+="%{$fg[green]%}+$staged%{$reset_color%}"
+	[ $unstaged -gt 0 ] && hook_com[staged]+="%{$fg[yellow]%}~$unstaged%{$reset_color%}"
+	[ $untracked -gt 0 ] && hook_com[staged]+="%{$fg[blue]%}?$untracked%{$reset_color%}"
 }
-PROMPT='%F{green}%*%f %F{blue}%B%~%b%f %F{green}${vcs_info_msg_0_}%f$(git_status_info) $ '
+exitcode() {
+	[ ${code:=$?} -ne 0 -a $code -ne 130 ] && echo -e "%B%F{red}${code}%b "
+}
+setopt prompt_subst
+PROMPT='$(exitcode)%* %F{blue}%B%~%b%f ${vcs_info_msg_0_} $ '
+
 plugins=(
     git
     history
@@ -72,3 +76,4 @@ done;
 unset file;
 
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+export PATH="$HOME/.nvm/versions/node/v18.12.1/bin:$PATH"
