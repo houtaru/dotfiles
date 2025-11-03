@@ -44,7 +44,12 @@ pop() {
 
 path() {
 	local target="${1:-${PWD}}"
-	realpath $target | head -c -1 | copy
+	realpath $target | copy
 }
 
+wlog() {
+	local dir=$(find "$LOG_DIR" \
+		-name "*" \
+		-type f 2>/dev/null | sed 's@^\./@@' | fzf -d / --nth -1 --reverse -0 --cycle --height 100%)
+}
 
