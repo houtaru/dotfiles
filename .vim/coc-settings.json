@@ -1,15 +1,21 @@
 {
-// 	"suggest.autoTrigger": "trigger",
+	"coc.preferences.useQuickfixForLocations": true,
+	"diagnostic.enableMessage": "never",
+	"suggest.autoTrigger": "trigger",
 	"coc.preferences.jumpCommand": "edit",
+	"diagnostic.virtualTextCurrentLineOnly": false,
+	"diagnostic.virtualText": true,
 	"coc.preferences.currentFunctionSymbolAutoUpdate": true,
-	"clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/18.1.3/clangd_18.1.3/bin/clangd",
+	"clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/19.1.2/clangd_19.1.2/bin/clangd",
 	"clangd.arguments": [
 		"--background-index",
 		"-j=4",
+		// "--log=verbose", // only enable when debug
 		"--malloc-trim",
 		"--pch-storage=memory",
 		"--header-insertion=never",
 		"--all-scopes-completion",
+		"--limit-references=100",
 		"--query-driver=/usr/bin/g++"
 	],
 	"clangd.compilationDatabaseCandidates": [
@@ -35,13 +41,14 @@
 			"command": "cmake-language-server",
 			"filetypes": ["cmake"],
 			"rootPatterns": [
-				"build/"
+				"build*/*",
 			],
 			"initializationOptions": {
 				"buildDirectory": "build"
 			}
 		}
 	},
-	"rust-analyzer.updates.checkOnStartup": false
+  "rust-analyzer.updates.checkOnStartup": false,
+	"rust-analyzer.server.path": "/home/lap60742/.cargo/bin/rust-analyzer"
 }
 

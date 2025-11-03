@@ -1,0 +1,122 @@
+#!/bin/bash
+read -rd '' BASHRC << 'EOF'
+<(cat << 'BASHRC'
+source ~/.bashrc
+alias psgw='ps -ef | grep $PWD'
+alias grep='grep --color=auto'
+alias egrep='grep -En'
+alias rgrep='grep -rn'
+alias rsync='rsync --bwlimit=20000 '
+alias mv='mv -v'
+alias rm='rm -v'
+alias cp='cp -v'
+ip=${SSH_CONNECTION#* * }
+ip=${ip% *}
+PS1='\[\033[01;34m\]$USER@${ip} \[\033[01;32m\]\w \[\033[00m\]\$ '
+
+duls() {
+	local dest="${1:-.}"
+	du -sm $dest/* | sort -n | numfmt --from-unit=1048576 --to=iec --field 1 | column -t
+}
+
+dgrep() {
+    grep -r --include=*.properties --exclude-dir=bk --color=always \
+	    "$@" /tmp 2>/dev/null | sed 's/bin\//bin /'
+
+}
+
+rpath() {
+	local dest="${1:-.}"
+	echo $(whoami)@$ip:$(readlink -f $dest)
+}
+#
+# push to bottom of stack
+push() {
+	local target="$@"
+	if [[ $# -eq 0 ]]; then
+		target=${PWD}
+	fi
+	builtin pushd "$target" > /dev/null
+	builtin dirs -v > /dev/null
+	builtin pushd -1 > /dev/null 2>&1
+}
+
+# pop from bottom of stack
+pop() {
+	builtin pushd +1 > /dev/null 2>&1
+	builtin popd >/dev/null 2>&1
+}
+
+infodb() {
+	if [ $# -eq 0 ]; then
+		echo "usage: home|data|cml|kc"
+	fi
+
+	local config=$(ls *server.properties | head -n1)
+	local app_name=$(grep "app.name=" (server.properties))
+}
+
+mkcd() {
+	if [ $# -eq 0 ]; then
+		exit 1
+	fi
+	mkdir -p $1
+	cd $1
+}
+
+BASHRC
+)
+EOF
+
+function validIp() {
+	if [[ $1 =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+		return 0
+	fi
+	return 1
+}
+
+function findIp() {
+	local pattern=$1
+	local sources="$HOME/.config/servers.list"
+
+	[[ ! -f $sources  ]] && touch $sources
+
+	list=$(grep -E "$1$" $sources);
+	if [ -z "$list" ]; then
+		if validIp $pattern; then
+			echo $pattern >> $sources
+			list=$pattern
+		else
+			echo "Not found"
+			exit 1
+		fi
+	fi
+
+	if [ $(echo "$list" | wc -l) -gt 1 ]; then
+		echo "Potential server:"
+		echo "$list"
+		exit 1
+	fi
+	echo $list
+}
+
+function findTarget() {
+	local user="${1%%@*}"
+	local patt="${1#*@}"
+	if [[ $1 != *@*  ]] || [ -z "$user" ]; then
+		# user=ijika
+		exit 1
+	fi
+
+	ret=$(findIp $patt)
+	if [ $? -ne 0 ]; then
+		echo $ret
+		exit 1
+	fi
+	echo "${user}@${ret}"
+}
+
+set -e
+target=$(findTarget $1) || (echo "$target" && exit 1)
+set +e
+exec ssh "${target}" -t "cd $2;bash --rcfile $BASHRC"

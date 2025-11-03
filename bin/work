@@ -1,0 +1,44 @@
+#!/bin/bash
+
+read name directory < <(fzf --reverse --cycle --nth 1 --with-nth 1,2,3 -q "$*" -1 << 'EOF'
+vpn                      /data/openvpn
+EOF
+)
+
+cmd=()
+
+gen_initial_env() {
+	case ${name} in
+		vpn)
+			directory=/data/openvpn
+			cmd+=(
+				/data/openvpn/up.sh
+			)
+			;;
+		*)
+			[ -d $name ] && cmd+=(
+				$name
+			)
+			;;
+	esac
+}
+
+gen_initial_env
+cd $directory
+echo $pwd
+is_exist=1
+if ! tmux has-session -t=$name 2>/dev/null; then
+	tmux new-session -d -s $name
+	is_exist=0
+fi
+
+echo "exist? $is_exist"
+
+if [ $is_exist -eq 0 ]; then
+	for item in ${cmd[@]}; do
+		tmux send-keys -t "${name}:1.0" "${item}" Enter
+	done
+fi
+
+[ -n "$TMUX" ] && exec tmux switch-client -t $name || exec tmux attach -t $name
+set +e

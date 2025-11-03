@@ -5,6 +5,9 @@ alias rm="rm -v"
 alias ls="ls --color=auto -I \"*.plist\""
 alias drag="dragon -a"
 alias copy="xclip -selection clipboard"
+alias clear-clipboard="xclip -sel clipboard < /dev/null"
+alias sortips="sort -u -n -t . -k1,1 -k2,2 -k 3,3 -k 4,4"
+alias dirtime="find . -type f -printf '%TY-%Tm-%Td %TH:%TM %P\n' | sort | tail -n 5"
 
 # Always enable colored `grep` output
 # Note: `GREP_OPTIONS="--color=auto"` is deprecated, hence the alias usage.
@@ -13,6 +16,7 @@ alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 alias -g J='-J zbe@10.30.22.114'
 alias -g F='-F zbe@10.30.22.114'
+alias gs="git status"
 
 # work
 #alias run-project='build-project run'

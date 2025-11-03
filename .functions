@@ -12,6 +12,19 @@ jd() {
 	[[ -z $dir ]] || cd $dir
 }
 
+gjd() {
+	local target="$@"
+	if [[ $# -eq 0 ]]; then
+		target=${PWD}
+	fi
+	local dir=""
+	if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+		exit 1
+	fi
+	dir=$(git worktree list | sed 's@^\./@@' | fzf -d / --nth -1 --reverse -0 --cycle --height 100% | cut -d' ' -f1)
+	[[ -z $dir ]] || cd $dir
+}
+
 # push to bottom of stack
 push() {
 	local target="$@"
@@ -34,9 +47,4 @@ path() {
 	realpath $target | head -c -1 | copy
 }
 
-wlog() {
-	local dir=$(find "$LOG_DIR" \
-		-name "*" \
-		-type f 2>/dev/null | sed 's@^\./@@' | fzf -d / --nth -1 --reverse -0 --cycle --height 100%)
-}
 

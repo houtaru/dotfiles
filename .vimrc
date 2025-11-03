@@ -78,13 +78,18 @@ nmap [h <Plug>(GitGutterPrevHunk)
 " }}
 
 " fzf {{
+command! -bang -nargs=* Rg
+  \ cexpr system('rg --column --line-number --no-heading --smart-case ' . shellescape(<q-args>))
+  \ | copen
 nnoremap <silent> <C-P> :Files!<cr>
 noremap <silent> t] :Tags <C-R><C-W><cr>
 noremap <silent> g] :call fzf#vim#tags(expand('<cword>')) <cr>
+cabbrev rg Rg
 
 " }}
 
 " coc.nvim {{
+let g:coc_node_path='/home/lap15233/.nvm/versions/node/v22.14.0/bin//node'
 set nobackup              " Some servers have issues with backup files
 set nowritebackup
 set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
@@ -98,22 +103,15 @@ function! CheckBackspace() abort
   return !col || getline('.')[col - 1]  =~# '\s'
 endfunction
 
-" jump to next suggestion
-inoremap <silent><expr> <TAB>
-      \ coc#pum#visible() ? coc#pum#next(1) :
-      \ CheckBackspace() ? "\<Tab>" :
-      \ coc#refresh()
-" jump to previous suggestion
-inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
-" accept selection
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-" trigger completion
-inoremap <silent><expr> <C-@> coc#refresh()
-
-" diagnostic
-nmap <silent> [g <Plug>(coc-diagnostic-prev)
-nmap <silent> ]g <Plug>(coc-diagnostic-next)
+" show review window
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+  else
+    call feedkeys('K', 'in')
+  endif
+endfunction
+nnoremap <silent> K :call ShowDocumentation()<CR>
 
 " navigation
 function! s:DoNavigation(action) 
@@ -129,47 +127,62 @@ function! s:DoNavigation(action)
   endif
 endfunction
 
-nmap <silent> C-] :call <SID>DoNavigation('jumpDefinition')<cr>
-nmap <silent> gd :call <SID>DoNavigation('jumpDefinition')<cr>
-nmap <silent> gy :call <SID>DoNavigation('jumpTypeDefinition')<cr>
-nmap <silent> gi :call <SID>DoNavigation('jumpImplementation')<cr>
-nmap <silent> gr :call <SID>DoNavigation('jumpReferences')<cr>
-xmap <leader>f  <Plug>(coc-format-selected)
-nmap <leader>f  <Plug>(coc-format-selected)
+augroup coc_keymaps
+  autocmd!
+  autocmd VimEnter * call s:setup_coc_keymaps()
+augroup END
 
-" show review window
-function! ShowDocumentation()
-  if CocAction('hasProvider', 'hover')
-    call CocActionAsync('doHover')
-  else
-    call feedkeys('K', 'in')
+function! s:setup_coc_keymaps()
+  " jump to next suggestion
+  inoremap <silent><expr> <TAB>
+        \ coc#pum#visible() ? coc#pum#next(1) :
+        \ CheckBackspace() ? "\<Tab>" :
+        \ coc#refresh()
+  " jump to previous suggestion
+  inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+  " accept selection
+  inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                                \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+  " trigger completion
+  inoremap <silent><expr> <C-@> coc#refresh()
+
+  " diagnostic
+  nmap <silent> gp <Plug>(coc-diagnostic-prev)
+  nmap <silent> gn <Plug>(coc-diagnostic-next)
+
+  nmap <silent> gd :call <SID>DoNavigation('jumpDefinition')<cr>
+  nmap <silent> gy :call <SID>DoNavigation('jumpTypeDefinition')<cr>
+  nmap <silent> gi :call <SID>DoNavigation('jumpImplementation')<cr>
+  nmap <silent> gr :call <SID>DoNavigation('jumpReferences')<cr>
+  xmap <leader>f  <Plug>(coc-format-selected)
+  nmap <leader>f  <Plug>(coc-format-selected)
+
+  " Show a list of all available code actions (refactor, fix, etc.)
+  nmap <buffer> <silent> <leader>ca <Plug>(coc-codeaction)
+  vmap <buffer> <silent> <leader>ca <Plug>(coc-codeaction-selected)
+  " Apply the most preferred quickfix action to fix diagnostic on the current line
+  nmap <leader>cf  <Plug>(coc-fix-current)
+
+  " Highlight the symbol and its references when holding the cursor
+  autocmd CursorHold * silent call CocActionAsync('highlight')
+
+  " Remap <C-f> and <C-b> to scroll float windows/popups
+  if has('nvim-0.4.0') || has('patch-8.2.0750')
+    nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+    nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+    inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
+    inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
+    vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+    vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
   endif
+
+  " Find symbol of current document
+  nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
+  nnoremap <silent><nowait> <space>a  :<C-u>CocList diagnostics<cr>
+  nnoremap <silent> <nowait> <leader>dt :call CocAction('diagnosticToggle')<cr>
+  " }}
 endfunction
-nnoremap <silent> K :call ShowDocumentation()<CR>
 
-" Highlight the symbol and its references when holding the cursor
-autocmd CursorHold * silent call CocActionAsync('highlight')
-
-" Remap <C-f> and <C-b> to scroll float windows/popups
-if has('nvim-0.4.0') || has('patch-8.2.0750')
-  nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-  nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-  inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
-  inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
-  vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-  vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-endif
-
-" Find symbol of current document
-nnoremap <silent><nowait> <space>o  :<C-u>CocList outline<cr>
-
-" Symbol renaming
-nmap <leader>rn <Plug>(coc-rename)
-" Apply the most preferred quickfix action to fix diagnostic on the current line
-nmap <leader>tf  <Plug>(coc-fix-current)
-" }}
-
-command! -nargs=? -complete=dir CocDiagnosticToggle :call CocAction('diagnosticToggle')
 
 " }}}
 
@@ -257,20 +270,17 @@ nnoremap <silent> <leader>q :call <sid>toggle_quickfix()<cr>
 nnoremap <expr> <leader>n (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bnext\n" : ":cnext\n")
 nnoremap <expr> <leader>b (empty(filter(tabpagebuflist(), 'getbufvar(v:val, "&buftype") is# "quickfix"')) ? ":bprev\n" : ":cprev\n")
 
-command! -nargs=? -complete=dir Grep :cexpr
-    \ system("grep -rnI " . shellescape(<q-args>)) | copen
 command! -nargs=? -complete=dir Gr :cexpr
     \ system("grep -rnI " . shellescape(<q-args>)) | copen
 cabbrev grep Grep
 cabbrev gr Gr
-cabbrev grz Grz
 
 " }}
 
 " }}}
 
 " {{ command alias
-cabbrev now put =strftime('%Y/%m/%d %H:%M')
+cabbrev now put =strftime('%Y-%m-%d %H:%M')
 
 " }}}
 
@@ -294,8 +304,8 @@ function! CPPSET()
   " set foldmarker={,}
   command! -nargs=? -complete=dir Gr :cexpr
         \ system("grep -rnI --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' " . shellescape(<q-args>)) | copen
-  command! -nargs=? -complete=dir Grz :cexpr
-        \ system("grep -rnI --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' --exclude-dir='thrift' --exclude-dir='thriftzg' " . shellescape(<q-args>)) | copen
+  command! -bang -nargs=* Rg :cexpr
+        \ system('rg --column --line-number --no-heading --smart-case -t c -t cpp ' . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F9> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>:!exec %:p:r<cr>
   nnoremap <buffer> <F8> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
@@ -309,6 +319,8 @@ function! JAVASET()
   set foldmarker={,}
   command! -nargs=? -complete=dir Gr :cexpr
         \ system("grep -rnI --include='*.java' " . shellescape(<q-args>)) | copen
+  command! -bang -nargs=* Rg :cexpr
+        \ system('rg --column --line-number --no-heading --smart-case -t c -t java ' . shellescape(<q-args>)) | copen
   nnoremap <buffer> <F8> :w<cr>:!javac %<cr>
   nnoremap <buffer> <F9> :w<cr>:!javac %<cr>:!java %< %<cr>
 endfunction
@@ -330,6 +342,8 @@ function! RUSTSET()
 
   command! -nargs=? -complete=dir Gr :cexpr
         \ system("grep -rnI --include='*.rs' " . shellescape(<q-args>)) | copen
+  command! -bang -nargs=* Rg :cexpr
+        \ system('rg --column --line-number --no-heading --smart-case -t c -t rust ' . shellescape(<q-args>)) | copen
   " set makepgr=cargo
   nnoremap <buffer> <F8> :w<cr>:!rustc % <cr>
   nnoremap <buffer> <F9> :w<cr>:!rustc % <cr>:!./%<<cr>
