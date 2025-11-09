@@ -8,7 +8,6 @@ endif
 
 call plug#begin("~/.vim/plugged")
 
-Plug 'jiangmiao/auto-pairs'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
@@ -72,8 +71,8 @@ color jellybeans	" set background=dark for other machine, but use jellybeans in 
 
 cabbrev git Git
 let g:gitgutter_show_msg_on_hunk_jumping = 0
-nmap ]h <Plug>(GitGutterNextHunk)
-nmap [h <Plug>(GitGutterPrevHunk)
+nmap hn <Plug>(GitGutterNextHunk)
+nmap hb <Plug>(GitGutterPrevHunk)
 
 " }}
 
@@ -158,8 +157,8 @@ function! s:setup_coc_keymaps()
   nmap <leader>f  <Plug>(coc-format-selected)
 
   " Show a list of all available code actions (refactor, fix, etc.)
-  nmap <buffer> <silent> <leader>ca <Plug>(coc-codeaction)
-  vmap <buffer> <silent> <leader>ca <Plug>(coc-codeaction-selected)
+  nmap <silent> <leader>ca <Plug>(coc-codeaction)
+  vmap <silent> <leader>ca <Plug>(coc-codeaction-selected)
   " Apply the most preferred quickfix action to fix diagnostic on the current line
   nmap <leader>cf  <Plug>(coc-fix-current)
 
@@ -284,12 +283,91 @@ cabbrev now put =strftime('%Y-%m-%d %H:%M')
 
 " }}}
 
-" {{{ auto commands
+" {{{ toggle relative number
 augroup numbertogglegroup
   autocmd!
   autocmd BufEnter,FocusGained,InsertLeave,WinEnter * if &nu && mode() != "i" | set rnu   | endif
   autocmd BufLeave,FocusLost,InsertEnter,WinLeave   * if &nu                  | set nornu | endif
 augroup end
+" }}
+
+" {{ simple autopair
+let g:pairs = {'(':')', '[':']', '{':'}', '"':'"', "'":"'", '`':'`'}
+
+" Get characters before and after cursor
+function! s:AutoPairContext()
+  let [line, col] = [getline('.'), col('.') - 1]
+  return [col > 0 ? line[col-1] : '', col < len(line) ? line[col] : '']
+endfunction
+
+" Insert opening char and closing pair
+function! s:AutoPairInsertOpen(open, close)
+  return a:open . a:close . "\<Left>"
+endfunction
+
+" Jump over closing char or insert quote
+function! s:AutoPairInsertClose(char)
+  let [before, after] = s:AutoPairContext()
+  " Jump over matching closing char
+  if after == a:char | return "\<Right>" | endif
+  " For quotes: insert pair only after non-word chars
+  if get(g:pairs, a:char, '') == a:char && before !~ '\w'
+    return a:char . a:char . "\<Left>"
+  endif
+  " Default: just insert
+  return a:char
+endfunction
+
+" Delete pair together
+function! s:AutoPairDelete()
+  let [before, after] = s:AutoPairContext()
+  return before != '' && has_key(g:pairs, before) && g:pairs[before] == after ? "\<BS>\<Del>" : "\<BS>"
+endfunction
+
+" Return between pairs
+function! s:AutoPairReturn()
+  let [before, after] = s:AutoPairContext()
+  return before != '' && get(g:pairs, before, '') == after ? "\<CR>\<CR>\<Up>\<Tab>" : "\<CR>"
+endfunction
+
+" Create mappings
+for [open, close] in items(g:pairs)
+  if open != close " open == close, only need map close
+    exe 'inoremap <silent>' open '<C-R>=<SID>AutoPairInsertOpen("'.escape(open, '\"').'", "'.escape(close, '\"').'")<CR>'
+  endif
+  exe 'inoremap <silent>' close '<C-R>=<SID>AutoPairInsertClose("'.escape(close, '\"').'")<CR>'
+endfor
+
+inoremap <silent> <BS> <C-R>=<SID>AutoPairDelete()<CR>
+inoremap <silent> <CR> <C-R>=<SID>AutoPairReturn()<CR>
+" }}
+
+" {{ auto load local vimrc recursively
+set secure " enable secure mode when load local vimrc inside sandbox
+
+function! LoadCascadingLocalRc()
+  let l:current_dir = expand('%:p:h')
+  if l:current_dir ==# ''
+    return
+  endif
+  let l:dirs = []
+  let l:parent_dir = l:current_dir
+  let l:previous_dir = ''
+  while l:parent_dir !=# l:previous_dir
+    call add(l:dirs, l:parent_dir)
+    let l:previous_dir = l:parent_dir
+    let l:parent_dir = fnamemodify(l:parent_dir, ':h')
+  endwhile
+  call reverse(l:dirs)
+  for l:dir in l:dirs
+    let l:exrc = l:dir . '/.exrc'
+    if filereadable(l:exrc)
+      silent execute 'sandbox source' fnameescape(l:exrc)
+    endif
+  endfor
+endfunction
+
+autocmd BufEnter * call LoadCascadingLocalRc()
 " }}
 
 " -----------------------------------------------------------------------------

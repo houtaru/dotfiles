@@ -11,7 +11,7 @@
 		"--background-index",
 		"-j=4",
 		// "--log=verbose", // only enable when debug
-		"--malloc-trim",
+		// "--malloc-trim",
 		"--pch-storage=memory",
 		"--header-insertion=never",
 		"--all-scopes-completion",
