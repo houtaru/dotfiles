@@ -29,7 +29,7 @@ call plug#end()
 
 " netrw {{
 " Hide .swp, .pyc, ENV/, .git/, *.map, *.plist
-let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map,.*\.plist$'
+let g:netrw_list_hide= '.*\.swp$,.*\.pyc,ENV,.git/,.*\.map,.*\.plist,.*\.cache/$'
 " Override netrw settings to show line numbers
 let g:netrw_bufsettings = 'noma nomod nu nobl nowrap ro'
 " Set size for the new :Lexplore
@@ -71,9 +71,119 @@ color jellybeans	" set background=dark for other machine, but use jellybeans in 
 
 cabbrev git Git
 let g:gitgutter_show_msg_on_hunk_jumping = 0
-nmap hn <Plug>(GitGutterNextHunk)
-nmap hb <Plug>(GitGutterPrevHunk)
+nmap ]h <Plug>(GitGutterNextHunk)
+nmap [h <Plug>(GitGutterPrevHunk)
 
+nmap ]d :diffget //3
+nmap [d :diffget //2
+
+" Compare working tree with git branch/commit/tag
+command! -nargs=1 -complete=customlist,s:GitRefComplete GcCompare call s:GitCompare(<f-args>)
+
+function! s:GitRefComplete(A, L, P)
+  let refs = systemlist('git for-each-ref --format="%(refname:short)" refs/')
+  return filter(refs + ['HEAD', 'HEAD~1', 'HEAD~2', 'HEAD~3'], 'v:val =~ "^" . a:A')
+endfunction
+
+function! s:GitCompare(ref)
+  let output = systemlist('git diff --name-status ' . shellescape(a:ref) . ' 2>&1')
+  if v:shell_error | echohl ErrorMsg | echo 'Git error: ' . join(output, ' ') | echohl None | return | endif
+  if empty(output) | echo 'No changes' | return | endif
+
+  let files = []
+  for line in output
+    let parts = split(line, "\t")
+    if len(parts) >= 2
+      let status = parts[0] =~# '^[DA]' ? parts[0] : 'M'
+      call add(files, status . ' ' . join(parts[1:], "\t"))
+    endif
+  endfor
+  let current = substitute(system('git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD'), '\n', '', 'g')
+
+  " Reuse or create review buffer
+  let bufname = '[Review] Git: ' . a:ref
+  let existing = bufnr(bufname)
+  if existing != -1 && bufwinnr(existing) != -1
+    execute bufwinnr(existing) . 'wincmd w'
+  else
+    botright 12new
+    if existing == -1
+      setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted cursorline nonumber norelativenumber nowrap
+      execute 'file ' . fnameescape(bufname)
+    else
+      execute 'buffer ' . existing
+    endif
+  endif
+
+  let b:review_git_ref = a:ref
+  call setline(1, ['Current: ' . current, 'Compare to: ' . a:ref, 
+        \ 'Help: dv=vert diff, ds=horiz diff, dq=close diff, <CR>=open, gq=quit', repeat('-', 70)] + files)
+
+  syntax match ReviewHeader /^Current:.*\|^Compare to:.*$/
+  syntax match ReviewHelp /^Help:.*$/ | syntax match ReviewSeparator /^-\+$/
+  syntax match ReviewModified /^M / | syntax match ReviewDeleted /^D / | syntax match ReviewAdded /^A /
+  highlight link ReviewHeader Title | highlight link ReviewSeparator Comment
+  highlight ReviewHelp ctermfg=cyan guifg=cyan
+  highlight ReviewModified ctermfg=yellow guifg=yellow | highlight ReviewDeleted ctermfg=red guifg=red
+  highlight ReviewAdded ctermfg=green guifg=green
+
+  nnoremap <buffer> gq :q<CR> | nnoremap <buffer> <Esc> :q<CR>
+  nnoremap <buffer> <silent> <CR> :call <SID>GitOpenFile()<CR>
+  nnoremap <buffer> <silent> dv :call <SID>GitDiffFile('vertical')<CR>
+  nnoremap <buffer> <silent> ds :call <SID>GitDiffFile('horizontal')<CR>
+  nnoremap <buffer> <silent> dq :call <SID>GitCloseDiff()<CR>
+  call cursor(5, 1)
+endfunction
+
+function! s:GitGetFileInfo()
+  let line = getline('.')
+  return line !~# '^[MAD] ' ? v:null : {'file': substitute(line, '^[MAD] ', '', ''), 'status': matchstr(line, '^[MAD]')}
+endfunction
+
+function! s:GitOpenFile()
+  let info = s:GitGetFileInfo()
+  if info is v:null | return | endif
+  if info.status ==# 'D' | echo 'File deleted in working tree' | return | endif
+
+  let review_win = win_getid()
+  wincmd p | execute 'edit ' . fnameescape(info.file) | call win_gotoid(review_win)
+endfunction
+
+function! s:GitDiffFile(split_type)
+  let info = s:GitGetFileInfo()
+  if info is v:null | return | endif
+
+  let ref = b:review_git_ref
+  let current_line = line('.')
+
+  wincmd p | if &diff | diffoff | endif | only
+
+  " For deleted files, show diff between ref and empty buffer
+  if info.status ==# 'D'
+    execute 'Gedit ' . ref . ':' . info.file
+    execute (a:split_type ==# 'vertical' ? 'rightbelow vertical' : 'rightbelow') . ' new'
+    setlocal buftype=nofile bufhidden=wipe noswapfile
+    execute 'file ' . fnameescape(info.file . ' (deleted)')
+    diffthis
+    wincmd p | diffthis
+  else
+    execute 'edit ' . fnameescape(info.file)
+    execute (a:split_type ==# 'vertical' ? 'leftabove vertical' : 'leftabove') . ' Gdiffsplit ' . ref
+    wincmd p
+  endif
+
+  botright 12split | execute 'buffer ' . bufnr('[Review] Git: ' . ref)
+  call cursor(current_line, 1) | wincmd k
+endfunction
+
+function! s:GitCloseDiff()
+  let review_win = win_getid()
+  wincmd p
+  if &diff
+    diffoff | wincmd w | if &diff | close | endif
+  endif
+  call win_gotoid(review_win)
+endfunction
 " }}
 
 " fzf {{
@@ -88,7 +198,6 @@ cabbrev rg Rg
 " }}
 
 " coc.nvim {{
-let g:coc_node_path='/home/lap15233/.nvm/versions/node/v22.14.0/bin//node'
 set nobackup              " Some servers have issues with backup files
 set nowritebackup
 set updatetime=300        " Having longer updatetime (default is 4000 ms = 4s) leads to noticeable  delays and poor user experience
@@ -146,8 +255,8 @@ function! s:setup_coc_keymaps()
   inoremap <silent><expr> <C-@> coc#refresh()
 
   " diagnostic
-  nmap <silent> gp <Plug>(coc-diagnostic-prev)
-  nmap <silent> gn <Plug>(coc-diagnostic-next)
+  nmap <silent> ]g <Plug>(coc-diagnostic-prev)
+  nmap <silent> [g <Plug>(coc-diagnostic-next)
 
   nmap <silent> gd :call <SID>DoNavigation('jumpDefinition')<cr>
   nmap <silent> gy :call <SID>DoNavigation('jumpTypeDefinition')<cr>
