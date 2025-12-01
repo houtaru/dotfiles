@@ -493,8 +493,8 @@ function! CPPSET()
         \ system("grep -rnI --include='*.h' --include='*.cpp' --include='*.c' --include='*.cc' " . shellescape(<q-args>)) | copen
   command! -bang -nargs=* Rg :cexpr
         \ system('rg --column --line-number --no-heading --smart-case -t c -t cpp ' . shellescape(<q-args>)) | copen
-  nnoremap <buffer> <F9> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>:!exec %:p:r<cr>
-  nnoremap <buffer> <F8> :w<cr>:!g++-11 -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
+  nnoremap <buffer> <F9> :w<cr>:!g++ -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>:!exec %:p:r<cr>
+  nnoremap <buffer> <F8> :w<cr>:!g++ -g -Wall -Wextra -Wshadow -O2 % -o %< -std=c++14 -I ./<cr>
 endfunction
 
 " Java
@@ -539,8 +539,51 @@ endfunction
 " Beautify JSON
 nmap =j :%!python -m json.tool<CR>
 
+" Templates
+let s:git_name = substitute(system('git config user.name'), '\n\+$', '', '')
+let s:git_email = substitute(system('git config user.email'), '\n\+$', '', '')
+let g:code_author = s:git_name . ' (' . s:git_email . ')'
+
+command! Template call s:LoadTemplate()
+
+function! s:LoadTemplate()
+    let l:type = &filetype
+    if l:type == ''
+        let l:type = expand('%:e')
+    endif
+
+    let l:template_path = expand('~/.vim/templates/template.' . l:type)
+    if !filereadable(l:template_path)
+        echo "Template not found: " . l:template_path . " (Filetype: " . l:type . ")"
+        return
+    endif
+
+    let l:content = readfile(l:template_path)
+    let l:output = []
+    let l:cursor_pos = [0, 0]
+    let l:row = 1
+    for l:line in l:content
+        let l:line = substitute(l:line, '{{FILE}}', expand('%:t'), 'g')
+        let l:line = substitute(l:line, '{{AUTHOR}}', g:code_author, 'g')
+        let l:line = substitute(l:line, '{{DATE}}', strftime('%Y-%m-%d %H:%M:%S'), 'g')
+        if l:line =~ '{{CURSOR}}'
+            let l:col = stridx(l:line, '{{CURSOR}}')
+            let l:line = substitute(l:line, '{{CURSOR}}', '', '')
+            let l:cursor_pos = [l:row, l:col + 1]
+        endif
+
+        call add(l:output, l:line)
+        let l:row += 1
+    endfor
+
+    call setline(1, l:output)
+    if l:cursor_pos[0] != 0
+        call cursor(l:cursor_pos[0], l:cursor_pos[1])
+    endif
+endfunction
+
 " Remove trailing spaces
-"autocmd BufWritePre * :%s/\s\+$//e
+autocmd BufWritePre * :%s/\s\+$//e
 
 " Autocommands for all languages:
 autocmd BufNewFile,BufReadPost *.py2 set filetype=python
