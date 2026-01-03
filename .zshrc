@@ -80,14 +80,20 @@ plugins=(
     zsh-syntax-highlighting
 )
 
-bindkey '^ ' forward-word
-bindkey '^[^M' autosuggest-accept
-
 source $ZSH/oh-my-zsh.sh
 for file in ~/.{path,bash_prompt,exports,aliases,functions,extra}; do
 	[ -r "$file" ] && [ -f "$file" ] && source "$file";
 done;
 unset file;
+
+if [[ $(uname -s) == "Darwin" ]]; then
+	bindkey '^[[1;3C' forward-word
+	bindkey '^[[1;3D' backward-word
+	bindkey '^[^M' autosuggest-accept
+else
+	bindkey '^ ' forward-word
+	bindkey '^[^M' autosuggest-accept
+fi
 
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 export PATH="$HOME/.nvm/versions/node/v18.12.1/bin:$PATH"
