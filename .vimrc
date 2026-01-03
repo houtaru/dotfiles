@@ -116,7 +116,7 @@ function! s:GitCompare(ref)
   endif
 
   let b:review_git_ref = a:ref
-  call setline(1, ['Current: ' . current, 'Compare to: ' . a:ref, 
+  call setline(1, ['Current: ' . current, 'Compare to: ' . a:ref,
         \ 'Help: dv=vert diff, ds=horiz diff, dq=close diff, <CR>=open, gq=quit', repeat('-', 70)] + files)
 
   syntax match ReviewHeader /^Current:.*\|^Compare to:.*$/
@@ -222,7 +222,7 @@ endfunction
 nnoremap <silent> K :call ShowDocumentation()<CR>
 
 " navigation
-function! s:DoNavigation(action) 
+function! s:DoNavigation(action)
   try
     if CocAction(a:action)
       return v:true
@@ -357,6 +357,19 @@ set smartcase		" use case sensitive if I use uppercase
 
 " {{{ jumping
 set switchbuf=useopen,usetab
+" }}}
+
+" {{{ swap
+let s:swapdir = $HOME . '/.vim/swap'
+if !isdirectory(s:swapdir)
+    " 'p' = create parent directories (like mkdir -p)
+    " 0700 = give read/write permissions only to the current user (security)
+    call mkdir(s:swapdir, 'p', 0700)
+endif
+" Set the swap directory to the new folder
+" The trailing '//' tells Vim to encode the full path in the swap filename
+" to prevent name collisions between files with the same name in different folders.
+let &directory = s:swapdir . '//'
 " }}}
 
 " {{{ Shortcuts
