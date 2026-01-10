@@ -1,0 +1,51 @@
+{
+    "vim.easymotion": true,
+    "vim.incsearch": true,
+    "vim.useSystemClipboard": true,
+    "vim.useCtrlKeys": true,
+    "vim.hlsearch": true,
+    "vim.normalModeKeyBindingsNonRecursive": [
+        {
+            "before": ["g", "d"],
+            "commands": ["editor.action.revealDefinition"]
+        },
+        {
+            "before": ["g", "y"],
+            "commands": ["editor.action.goToTypeDefinition"]
+        },
+        {
+            "before": ["g", "i"],
+            "commands": ["editor.action.goToImplementation"]
+        },
+        {
+            "before": ["g", "r"],
+            "commands": ["editor.action.goToReferences"]
+        },
+        {
+            "before": ["K"],
+            "commands": ["editor.action.showHover"]
+        },
+        {
+            "before": ["]", "g"],
+            "commands": ["editor.action.marker.prev"]
+        },
+        {
+            "before": ["[", "g"],
+            "commands": ["editor.action.marker.next"]
+        },
+        {
+            "before": ["]", "h"],
+            "commands": ["workbench.action.editor.nextChange"]
+        },
+        {
+            "before": ["[", "h"],
+            "commands": ["workbench.action.editor.previousChange"]
+        }
+    ],
+    "vim.visualModeKeyBindings": [
+        {
+            "before": ["="],
+            "commands": ["editor.action.formatSelection"]
+        }
+    ]
+}
