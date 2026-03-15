@@ -9,9 +9,9 @@ on:
         required: false
         default: "latest"
       node_version:
-        description: "Node.js version to bundle (e.g. 22.14.0)"
+        description: "Node.js version to bundle (e.g. 25.0.0)"
         required: false
-        default: "22.14.0"
+        default: "25.0.0"
 
 jobs:
   build:

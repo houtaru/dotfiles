@@ -6,13 +6,13 @@
 #
 #   (no args)                   build directly on this machine (CI / Linux with deps)
 #   docker                      build inside Docker (local dev, clean environment)
-#   docker v0.11.0 22.14.0      pin versions when using Docker
+#   docker v0.11.0 25.0.0       pin versions when using Docker
 #   SKIP_CACHE=1 ./build.sh docker   force a clean Docker image rebuild
 #
 # Output: dist/nvim-appimage-<commit>-x86_64.AppImage
 #         dist/build-info.txt
 #
-# The workflow calls:  ./scripts/build.sh v0.11.0 22.14.0
+# The workflow calls:  ./scripts/build.sh v0.11.0 25.0.0
 # Locally you call:    ./scripts/build.sh docker
 set -euo pipefail
 
@@ -26,7 +26,7 @@ if [[ "${1:-}" == "docker" ]]; then
 fi
 
 NVIM_VERSION="${1:-latest}"
-NODE_VERSION="${2:-22.14.0}"
+NODE_VERSION="${2:-25.0.0}"
 OUTPUT_DIR="$REPO_ROOT/dist"
 
 # ── Resolve 'latest' nvim version ────────────────────────────────────────────
@@ -114,16 +114,15 @@ chmod +x nvim.appimage
 ./nvim.appimage --appimage-extract
 APPDIR="$WORK/squashfs-root"
 
-# ── Node.js ───────────────────────────────────────────────────────────────────
-echo "→ Bundling Node.js v${NODE_VERSION}..."
+# ── Node.js (binary only — coc.nvim only needs the node executable) ──────────
+echo "→ Bundling Node.js v${NODE_VERSION} (binary only)..."
 wget -q \
   "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
   -O node.tar.xz
-mkdir -p "$APPDIR/usr/lib/node"
-tar -xJf node.tar.xz --strip-components=1 -C "$APPDIR/usr/lib/node"
-ln -sf ../lib/node/bin/node "$APPDIR/usr/bin/node"
-ln -sf ../lib/node/bin/npm  "$APPDIR/usr/bin/npm"
-ln -sf ../lib/node/bin/npx  "$APPDIR/usr/bin/npx"
+# Extract only the node binary — strip npm/npx/lib (~30MB saved vs full install)
+tar -xJf node.tar.xz --strip-components=2 \
+  "node-v${NODE_VERSION}-linux-x64/bin/node"
+install -m755 node "$APPDIR/usr/bin/node"
 echo "   $("$APPDIR/usr/bin/node" --version)"
 
 # ── rg ────────────────────────────────────────────────────────────────────────
@@ -173,6 +172,29 @@ NVIM="$APPDIR/AppRun"
 mkdir -p "$APPDIR/usr/share/nvim-appimage/data"
 cp -r "$XDG_DATA_HOME/nvim/." "$APPDIR/usr/share/nvim-appimage/data/" 2>/dev/null || true
 cp -r "$HOME/.config/coc/."   "$APPDIR/usr/share/nvim-appimage/coc/"  2>/dev/null || true
+
+# ── Strip bloat before packing ───────────────────────────────────────────────
+echo "→ Stripping unnecessary files..."
+
+# nvim runtime: remove help docs and tutor (saves ~8MB; treesitter replaces syntax/)
+rm -rf "$APPDIR/usr/share/nvim/runtime/doc"
+rm -rf "$APPDIR/usr/share/nvim/runtime/tutor"
+rm -rf "$APPDIR/usr/share/nvim/runtime/syntax"  # treesitter handles syntax
+
+# Lazy plugins: remove .git history (not needed at runtime)
+find "$APPDIR/usr/share/nvim-appimage/data" -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+# coc extensions: remove dev/test files that aren't needed at runtime
+find "$APPDIR/usr/share/nvim-appimage/coc" \
+  \( -name "*.d.ts" -o -name "*.map" -o -name "CHANGELOG*" \
+     -o -name "README*" -o -name "LICENSE*" -o -name ".eslintrc*" \
+     -o -type d -name "test" -o -type d -name "__tests__" \
+     -o -type d -name "spec" \) \
+  -exec rm -rf {} + 2>/dev/null || true
+
+# Treesitter plugin: remove parser test/corpus dirs (compiled .so files are kept)
+find "$APPDIR/usr/share/nvim-appimage/data" -path "*/nvim-treesitter/corpus" -exec rm -rf {} + 2>/dev/null || true
+find "$APPDIR/usr/share/nvim-appimage/data" -path "*/nvim-treesitter/test"   -exec rm -rf {} + 2>/dev/null || true
 
 # ── build-info.txt ────────────────────────────────────────────────────────────
 cat > "$APPDIR/build-info.txt" <<EOF
