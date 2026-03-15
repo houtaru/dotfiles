@@ -1,0 +1,44 @@
+name: Build Neovim AppImage
+
+# Manual trigger only — go to Actions → Build Neovim AppImage → Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      nvim_version:
+        description: "Neovim version (e.g. v0.11.0) or 'latest'"
+        required: false
+        default: "latest"
+      node_version:
+        description: "Node.js version to bundle (e.g. 22.14.0)"
+        required: false
+        default: "22.14.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            curl wget file patchelf libfuse2 git build-essential ca-certificates xz-utils
+
+      - name: Build AppImage
+        run: |
+          chmod +x scripts/build.sh
+          ./scripts/build.sh \
+            "${{ github.event.inputs.nvim_version }}" \
+            "${{ github.event.inputs.node_version }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvim-appimage-${{ github.sha }}
+          path: |
+            dist/nvim-appimage-*-x86_64.AppImage
+            dist/build-info.txt
+          retention-days: 30
