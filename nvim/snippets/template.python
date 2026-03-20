@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# {{FILE}} — {{AUTHOR}}
+# Created: {{DATE}}
+
+import sys
+import os
+
+{{CURSOR}}
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()

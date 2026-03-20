@@ -1,0 +1,10 @@
+// {{FILE}} — {{AUTHOR}}
+// Created: {{DATE}}
+
+use std::env;
+
+{{CURSOR}}
+
+fn main() {
+    let _args: Vec<String> = env::args().collect();
+}

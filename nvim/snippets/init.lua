@@ -608,11 +608,11 @@ local languages = {
   },
   {
     pattern  = "java",
-    tabs     = { size=2, expand=false },
+    tabs     = { size=2, expand=true },
   },
   {
     pattern  = "rust",
-    tabs     = { size=2, expand=false },
+    tabs     = { size=2, expand=true },
   },
   {
     pattern  = "go",
@@ -758,3 +758,14 @@ vim.api.nvim_create_user_command("Snipmake", function(opts)
   end
 end, { nargs="?" })
 
+-- ── BUILD INFO (AppImage) ─────────────────────────────────────────────────────
+vim.api.nvim_create_user_command("NvimBuildInfo", function()
+  local info_file = vim.env.APPDIR and (vim.env.APPDIR .. "/build-info.txt") or nil
+  if info_file and vim.fn.filereadable(info_file) == 1 then
+    for _, line in ipairs(vim.fn.readfile(info_file)) do
+      vim.notify(line, vim.log.levels.INFO)
+    end
+  else
+    vim.notify("Not running from an AppImage (no build-info.txt found)", vim.log.levels.WARN)
+  end
+end, {})

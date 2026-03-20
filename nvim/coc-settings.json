@@ -1,0 +1,35 @@
+{
+	"coc.preferences.useQuickfixForLocations": true,
+	"diagnostic.enableMessage": "jump",
+ 	"suggest.autoTrigger": "trigger",
+	"coc.preferences.jumpCommand": "edit",
+	"diagnostic.virtualTextCurrentLineOnly": false,
+	"diagnostic.virtualText": true,
+	"coc.preferences.currentFunctionSymbolAutoUpdate": true,
+	"clangd.path": "~/.config/coc/extensions/coc-clangd-data/install/19.1.2/clangd_19.1.2/bin/clangd",
+	"clangd.arguments": [
+		"--background-index",
+		"-j=4",
+		// "--log=verbose", // only enable when debug
+		"--malloc-trim",
+		"--pch-storage=memory",
+		"--header-insertion=never",
+		"--all-scopes-completion",
+		"--limit-references=100",
+		"--query-driver=/usr/bin/g++"
+	],
+	"clangd.compilationDatabaseCandidates": [
+		"${workspaceFolder}"
+	],
+	"clangd.fallbackFlags": [
+		"-Wall",
+		"-O2",
+		"-pthread",
+		"-lssl",
+		"-lcrypto",
+		"-lcurl"
+	],
+	"languageserver": {
+	},
+}
+
