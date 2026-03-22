@@ -90,50 +90,6 @@ if not vim.uv.fs_stat(lazypath) then
 end
 o.rtp:prepend(lazypath)
 
--- Treesitter: nvim-treesitter kept for its queries/ dir and textobjects.
--- Highlight driven by nvim 0.11's native vim.treesitter.start() from BufReadPost.
-local _ts_cfg = {
-  ensure_installed = { "c","cpp","java","go","rust","python",
-                       "lua","bash","json","yaml","toml","cmake",
-                       "tlaplus" },
-  auto_install  = false,
-  sync_install  = false,
-  highlight = { enable = false },  -- driven by BufReadPost autocmd (TSHighlightFold)
-  indent = { enable = true },
-  textobjects = {
-    select = {
-      enable = true, lookahead = true,
-      keymaps = {
-        ["af"] = { query="@function.outer", desc="KEYMAPS: around function" },
-        ["if"] = { query="@function.inner", desc="KEYMAPS: inner function" },
-        ["ac"] = { query="@class.outer",    desc="KEYMAPS: around class" },
-        ["ic"] = { query="@class.inner",    desc="KEYMAPS: inner class" },
-        ["aa"] = { query="@parameter.outer",desc="KEYMAPS: around argument" },
-        ["ia"] = { query="@parameter.inner",desc="KEYMAPS: inner argument" },
-        ["ab"] = { query="@block.outer",    desc="KEYMAPS: around block" },
-        ["ib"] = { query="@block.inner",    desc="KEYMAPS: inner block" },
-      },
-    },
-    move = {
-      enable = true, set_jumps = true,
-      -- NOTE: ]f/[f = jump between functions; ]F/[F = function end.
-      -- ]c/[c are reserved for DiffView diff chunk navigation (see GIT section).
-      goto_next_start     = { ["]f"]={ query="@function.outer", desc="KEYMAPS: next function start" } },
-      goto_next_end       = { ["]F"]={ query="@function.outer", desc="KEYMAPS: next function end" } },
-      goto_previous_start = { ["[f"]={ query="@function.outer", desc="KEYMAPS: prev function start" } },
-      goto_previous_end   = { ["[F"]={ query="@function.outer", desc="KEYMAPS: prev function end" } },
-      -- Class navigation kept on ]C/[C to free ]c/[c for diffview
-      goto_next_end       = { ["]C"]={ query="@class.outer",    desc="KEYMAPS: next class end" } },
-      goto_previous_end   = { ["[C"]={ query="@class.outer",    desc="KEYMAPS: prev class end" } },
-    },
-    swap = {
-      enable        = true,
-      swap_next     = { ["<leader>sn"]={ query="@parameter.inner", desc="KEYMAPS: swap arg →" } },
-      swap_previous = { ["<leader>sp"]={ query="@parameter.inner", desc="KEYMAPS: swap arg ←" } },
-    },
-  },
-}
-
 require("lazy").setup({
 
   { "folke/tokyonight.nvim", lazy=false, priority=1000,
@@ -143,16 +99,63 @@ require("lazy").setup({
 
   { "neoclide/coc.nvim", branch="release", event="BufReadPre" },
 
+-- ── TREESITTER ────────────────────────────────────────────────────────────
+  -- Both pinned to `main` (new rewrite API — incompatible with master).
+  -- Highlight is driven by the BufReadPost autocmd (vim.treesitter.start),
+  -- NOT by nvim-treesitter's own highlight module.
+  -- Textobjects keymaps are set globally here (new API has no per-buffer attach).
   { "nvim-treesitter/nvim-treesitter",
-    build = ":TSUpdate", lazy = false,
-    dependencies = { "nvim-treesitter/nvim-treesitter-textobjects" },
+    branch = "main", build = ":TSUpdate", lazy = false,
     config = function()
-      local ok, cfg = pcall(require, "nvim-treesitter.configs")
-      if not ok then return end
-      cfg.setup(_ts_cfg)
+      require("nvim-treesitter").setup {
+        ensure_installed = { "c","cpp","java","go","rust","python",
+                             "lua","bash","json","yaml","toml","cmake",
+                             "tlaplus" },
+        auto_install = false,
+      }
     end,
   },
-  { "nvim-treesitter/nvim-treesitter-textobjects", lazy=true },
+
+  { "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main", lazy = false,
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter-textobjects").setup {
+        select = { lookahead = true },
+      }
+
+      local sel = require("nvim-treesitter-textobjects.select")
+      local mov = require("nvim-treesitter-textobjects.move")
+      local swp = require("nvim-treesitter-textobjects.swap")
+
+      local xo = { "x", "o" }
+      local n   = { "n", "x", "o" }
+
+      -- ── select ─────────────────────────────────────────────────────────
+      vim.keymap.set(xo, "af", function() sel.select_textobject("@function.outer","textobjects") end, { desc="KEYMAPS: around function" })
+      vim.keymap.set(xo, "if", function() sel.select_textobject("@function.inner","textobjects") end, { desc="KEYMAPS: inner function" })
+      vim.keymap.set(xo, "ac", function() sel.select_textobject("@class.outer",   "textobjects") end, { desc="KEYMAPS: around class" })
+      vim.keymap.set(xo, "ic", function() sel.select_textobject("@class.inner",   "textobjects") end, { desc="KEYMAPS: inner class" })
+      vim.keymap.set(xo, "aa", function() sel.select_textobject("@parameter.outer","textobjects") end, { desc="KEYMAPS: around argument" })
+      vim.keymap.set(xo, "ia", function() sel.select_textobject("@parameter.inner","textobjects") end, { desc="KEYMAPS: inner argument" })
+      vim.keymap.set(xo, "ab", function() sel.select_textobject("@block.outer",   "textobjects") end, { desc="KEYMAPS: around block" })
+      vim.keymap.set(xo, "ib", function() sel.select_textobject("@block.inner",   "textobjects") end, { desc="KEYMAPS: inner block" })
+
+      -- ── move ───────────────────────────────────────────────────────────
+      -- ]f/[f = function start; ]F/[F = function end
+      -- ]C/[C = class end  (]c/[c reserved for diffview)
+      vim.keymap.set(n, "]f", function() mov.goto_next_start("@function.outer",    "textobjects") end, { desc="KEYMAPS: next function start" })
+      vim.keymap.set(n, "[f", function() mov.goto_previous_start("@function.outer","textobjects") end, { desc="KEYMAPS: prev function start" })
+      vim.keymap.set(n, "]F", function() mov.goto_next_end("@function.outer",      "textobjects") end, { desc="KEYMAPS: next function end" })
+      vim.keymap.set(n, "[F", function() mov.goto_previous_end("@function.outer",  "textobjects") end, { desc="KEYMAPS: prev function end" })
+      vim.keymap.set(n, "]C", function() mov.goto_next_end("@class.outer",         "textobjects") end, { desc="KEYMAPS: next class end" })
+      vim.keymap.set(n, "[C", function() mov.goto_previous_end("@class.outer",     "textobjects") end, { desc="KEYMAPS: prev class end" })
+
+      -- ── swap ───────────────────────────────────────────────────────────
+      vim.keymap.set(n, "<leader>sn", function() swp.swap_next("@parameter.inner","textobjects") end,     { desc="KEYMAPS: swap arg →" })
+      vim.keymap.set(n, "<leader>sp", function() swp.swap_previous("@parameter.inner","textobjects") end, { desc="KEYMAPS: swap arg ←" })
+    end,
+  },
 
   -- ── GIT ──────────────────────────────────────────────────────────────────
   -- Unified ]h / [h design:
