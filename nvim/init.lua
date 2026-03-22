@@ -330,6 +330,7 @@ require("lazy").setup({
       { "<C-P>",     function() require("fzf-lua").files() end,                                   desc="KEYMAPS: find files" },
       { "<leader>p", function() require("fzf-lua").files({ cwd=vim.fn.expand("%:p:h") }) end,     desc="KEYMAPS: find files (here)" },
       { "<leader>e", function() require("fzf-lua").buffers() end,                                 desc="KEYMAPS: switch buffer" },
+      { "<leader>r", function() require("fzf-lua").oldfiles() end,                                desc="KEYMAPS: recent files" },  -- ← ADD THIS
       { "g]",        function() require("fzf-lua").tags({ search=vim.fn.expand("<cword>") }) end, desc="KEYMAPS: ctag jump (fzf)" },
     },
     config = function()
