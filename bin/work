@@ -1,7 +1,9 @@
 #!/bin/bash
 
+set -e
 read name directory < <(fzf --reverse --cycle --nth 1 --with-nth 1,2,3 -q "$*" -1 << 'EOF'
-vpn                      /data/openvpn
+dotfiles                 /Users/ijika/code/repo/dotfiles
+dsa                      /Users/ijika/code/dsa
 EOF
 )
 
@@ -9,12 +11,6 @@ cmd=()
 
 gen_initial_env() {
 	case ${name} in
-		vpn)
-			directory=/data/openvpn
-			cmd+=(
-				/data/openvpn/up.sh
-			)
-			;;
 		*)
 			[ -d $name ] && cmd+=(
 				$name
