@@ -135,6 +135,7 @@ else
 fi
 
 # ── ALIASES ──────────────────────────────────────────────────────────────────
+alias nv="nvim"
 alias cp="cp -v"
 alias mv="mv -v"
 alias rm="rm -v"
