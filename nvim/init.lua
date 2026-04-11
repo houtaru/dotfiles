@@ -54,7 +54,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("WhitespaceHL", { clear=true }),
   callback = function()
     for _, g in ipairs({ "Whitespace", "NonText", "SpecialKey" }) do
-      vim.api.nvim_set_hl(0, g, { fg="#545c7e", ctermfg=60, bg="none" })
+      vim.api.nvim_set_hl(0, g, { fg="#4a4a4a", ctermfg=238, bg="none" })
     end
   end,
 })
@@ -88,10 +88,7 @@ o.rtp:prepend(lazypath)
 
 require("lazy").setup({
 
-  { "folke/tokyonight.nvim", lazy=false, priority=1000,
-    opts = { style="moon", transparent=true,
-             styles = { sidebars="transparent", floats="transparent" } },
-  },
+  { "tomasiser/vim-code-dark", lazy=false, priority=1000 },
 
   { "neoclide/coc.nvim", branch="release", event="BufReadPost" },
 
@@ -236,7 +233,7 @@ require("lazy").setup({
 
   { "nvim-lualine/lualine.nvim", event="VeryLazy",
     opts = {
-      options = { theme="tokyonight", globalstatus=true,
+      options = { theme="codedark", globalstatus=true,
                   component_separators={left="",right=""},
                   section_separators={left="",right=""} },
       sections = {
@@ -301,10 +298,50 @@ vim.api.nvim_create_autocmd("VimEnter", { once=true, callback=function()
 end })
 
 -- ── COLORSCHEME ───────────────────────────────────────────────────────────────
-vim.cmd.colorscheme("tokyonight-moon")
-for _, g in ipairs({ "Normal","NormalNC","LineNr","SignColumn","StatusLine" }) do
-  vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" })
+vim.cmd.colorscheme("codedark")
+
+-- vim-code-dark hard-codes bg on many groups; punch through all of them so the
+-- terminal background shows through (transparency).  We re-apply on every
+-- ColorScheme event so a late `:colorscheme` reload doesn't regress this.
+local function apply_transparency()
+  -- Groups that must be fully transparent (no bg at all).
+  local clear_bg = {
+    "Normal", "NormalNC", "NormalFloat",
+    "LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr",
+    "SignColumn", "FoldColumn",
+    "StatusLine", "StatusLineNC", "StatusLineTerm", "StatusLineTermNC",
+    "VertSplit", "WinSeparator",
+    "TabLine", "TabLineFill", "TabLineSel",
+    "EndOfBuffer",
+  }
+  for _, g in ipairs(clear_bg) do
+    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name=g, link=false })
+    if ok then
+      hl.bg    = nil
+      hl.ctermbg = nil
+      vim.api.nvim_set_hl(0, g, hl)
+    else
+      vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" })
+    end
+  end
 end
+
+apply_transparency()
+-- Folded: muted blue-grey text on a subtle dark bg — readable against any terminal bg.
+-- Must be set AFTER apply_transparency (which would otherwise wipe bg) and
+-- re-applied on every ColorScheme so a :colorscheme reload doesn't regress it.
+local function apply_folded_hl()
+  vim.api.nvim_set_hl(0, "Folded", { fg="#7a9ec2", bg="#1e2a35", italic=true, ctermfg=67, ctermbg=236 })
+end
+apply_folded_hl()
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group    = vim.api.nvim_create_augroup("CodeDarkTransparent", { clear=true }),
+  callback = apply_transparency,
+})
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group    = vim.api.nvim_create_augroup("FoldedHL", { clear=true }),
+  callback = apply_folded_hl,
+})
 
 if (vim.env.TERM or ""):match("^screen") then
   vim.keymap.set({"n","v"}, "~", "<Nop>")
@@ -453,6 +490,7 @@ local function rg_qf(pattern, extra_flags, title)
   vim.system(args, { text = true }, function(result)
     vim.schedule(function()
       -- rg exits 1 on no match, 2 on error.  Either way stdout is empty/nil.
+      -- Guard before setqflist so we never silently clear a previous result set.
       if (result.code ~= 0) and (not result.stdout or result.stdout == "") then
         vim.notify("Rg: no results for " .. pattern, vim.log.levels.INFO)
         return
@@ -467,7 +505,6 @@ local function rg_qf(pattern, extra_flags, title)
   end)
 end
 
--- Global :Rg (no filetype filter)
 vim.api.nvim_create_user_command("Rg", function(opts)
   rg_qf(opts.args, {})
 end, { nargs = "+" })
@@ -488,7 +525,14 @@ vim.api.nvim_create_user_command("Gr", function(opts)
   vim.cmd("copen")
 end, { nargs = "?" })
 
-vim.cmd("cabbrev rg Rg | cabbrev gr Gr")
+vim.cmd("cabbrev rg Rg")
+vim.cmd("cabbrev gr Gr")
+
+-- Remove trailing whitespace: `:'<,'>RmTrailing` for selection, `:RmTrailing` for whole file.
+vim.api.nvim_create_user_command("RmTrailing", function(opts)
+  vim.cmd(string.format("%s,%ss/\\s\\+$//e", opts.line1, opts.line2))
+end, { range = "%" })
+vim.cmd("cabbrev rmtrailing RmTrailing")
 
 -- ── KEYMAPS ───────────────────────────────────────────────────────────────────
 vim.keymap.set("n", "Q", "<Nop>")
@@ -694,7 +738,7 @@ local function apply_template(path)
     if ci then cursor={row,ci}; line=line:gsub("{{CURSOR}}","") end
     table.insert(out, line)
   end
-  vim.fn.append(0, out)
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, out)
   if cursor[1] ~= 0 then vim.fn.cursor(cursor[1], cursor[2]) end
 end
 
