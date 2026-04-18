@@ -565,7 +565,10 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz", { desc="KEYMAPS: scroll up (centred)" })
 vim.keymap.set("n", "n",     "nzzzv",   { desc="KEYMAPS: next search (centred)" })
 vim.keymap.set("n", "N",     "Nzzzv",   { desc="KEYMAPS: prev search (centred)" })
 
-vim.cmd("cabbrev now put =strftime('%Y-%m-%d %H:%M')")
+vim.api.nvim_set_keymap("i", "<leader>now"
+	, "<C-R>=strftime('%Y-%m-%d %H:%M')<CR>"
+	, { noremap = true, desc = "Insert currrent datetime"}
+)
 
 -- ── RELATIVE NUMBER TOGGLE ────────────────────────────────────────────────────
 local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
