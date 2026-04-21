@@ -203,7 +203,7 @@ require("lazy").setup({
   { "echasnovski/mini.pairs", event="InsertEnter",
     config = function() require("mini.pairs").setup() end },
 
-  { "stevearc/oil.nvim", lazy=true,
+  { "stevearc/oil.nvim", lazy=false,
     config = function()
       require("oil").setup({
         default_file_explorer = true,
