@@ -49,7 +49,6 @@ o.listchars = {
   extends="▸", precedes="◂", multispace="···⬝", leadmultispace="│   ",
 }
 
--- added augroup to avoid duplicating listeners when re-sourcing registers
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("WhitespaceHL", { clear=true }),
   callback = function()
@@ -97,7 +96,7 @@ require("lazy").setup({
     event  = "BufReadPost",
     config = function()
       require("nvim-treesitter").setup {
-        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus", },
+        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus" },
         auto_install = false,
       }
     end,
@@ -300,11 +299,7 @@ end })
 -- ── COLORSCHEME ───────────────────────────────────────────────────────────────
 vim.cmd.colorscheme("codedark")
 
--- vim-code-dark hard-codes bg on many groups; punch through all of them so the
--- terminal background shows through (transparency).  We re-apply on every
--- ColorScheme event so a late `:colorscheme` reload doesn't regress this.
 local function apply_transparency()
-  -- Groups that must be fully transparent (no bg at all).
   local clear_bg = {
     "Normal", "NormalNC", "NormalFloat",
     "LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr",
@@ -327,13 +322,12 @@ local function apply_transparency()
 end
 
 apply_transparency()
--- Folded: muted blue-grey text on a subtle dark bg — readable against any terminal bg.
--- Must be set AFTER apply_transparency (which would otherwise wipe bg) and
--- re-applied on every ColorScheme so a :colorscheme reload doesn't regress it.
+
 local function apply_folded_hl()
   vim.api.nvim_set_hl(0, "Folded", { fg="#7a9ec2", bg="#1e2a35", italic=true, ctermfg=67, ctermbg=236 })
 end
 apply_folded_hl()
+
 vim.api.nvim_create_autocmd("ColorScheme", {
   group    = vim.api.nvim_create_augroup("CodeDarkTransparent", { clear=true }),
   callback = apply_transparency,
@@ -484,13 +478,11 @@ local function rg_qf(pattern, extra_flags, title)
   for _, f in ipairs(extra_flags or {}) do
     table.insert(args, f)
   end
-  table.insert(args, "--")   -- end-of-flags sentinel: pattern may start with "-"
+  table.insert(args, "--")
   table.insert(args, pattern)
 
   vim.system(args, { text = true }, function(result)
     vim.schedule(function()
-      -- rg exits 1 on no match, 2 on error.  Either way stdout is empty/nil.
-      -- Guard before setqflist so we never silently clear a previous result set.
       if (result.code ~= 0) and (not result.stdout or result.stdout == "") then
         vim.notify("Rg: no results for " .. pattern, vim.log.levels.INFO)
         return
@@ -509,7 +501,6 @@ vim.api.nvim_create_user_command("Rg", function(opts)
   rg_qf(opts.args, {})
 end, { nargs = "+" })
 
--- Visual-mode: search the selection
 vim.keymap.set("v", "<leader>/", function()
   local saved = vim.fn.getreg("s")
   vim.cmd('noau normal! "sy')
@@ -528,7 +519,6 @@ end, { nargs = "?" })
 vim.cmd("cabbrev rg Rg")
 vim.cmd("cabbrev gr Gr")
 
--- Remove trailing whitespace: `:'<,'>RmTrailing` for selection, `:RmTrailing` for whole file.
 vim.api.nvim_create_user_command("RmTrailing", function(opts)
   vim.cmd(string.format("%s,%ss/\\s\\+$//e", opts.line1, opts.line2))
 end, { range = "%" })
@@ -549,25 +539,22 @@ vim.keymap.set("n", "<leader>x", "<cmd>bw<CR>", { desc="KEYMAPS: close buffer" }
 vim.keymap.set("n", "<leader>v", "<cmd>vsplit<CR>", { desc="KEYMAPS: vertical split" })
 vim.keymap.set("n", "<leader>s", "<cmd>split<CR>",  { desc="KEYMAPS: horizontal split" })
 
--- Alt+arrows  window resize
 vim.keymap.set("n", "<M-Up>",    "<cmd>resize +2<CR>",          { desc="KEYMAPS: resize ↑" })
 vim.keymap.set("n", "<M-Down>",  "<cmd>resize -2<CR>",          { desc="KEYMAPS: resize ↓" })
 vim.keymap.set("n", "<M-Left>",  "<cmd>vertical resize -2<CR>", { desc="KEYMAPS: resize ←" })
 vim.keymap.set("n", "<M-Right>", "<cmd>vertical resize +2<CR>", { desc="KEYMAPS: resize →" })
 
--- Move selected lines up/down
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc="KEYMAPS: move selection down" })
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc="KEYMAPS: move selection up" })
 
--- Keep cursor centred when jumping — reduces spatial disorientation in large files
 vim.keymap.set("n", "<C-d>", "<C-d>zz", { desc="KEYMAPS: scroll down (centred)" })
 vim.keymap.set("n", "<C-u>", "<C-u>zz", { desc="KEYMAPS: scroll up (centred)" })
 vim.keymap.set("n", "n",     "nzzzv",   { desc="KEYMAPS: next search (centred)" })
 vim.keymap.set("n", "N",     "Nzzzv",   { desc="KEYMAPS: prev search (centred)" })
 
-vim.api.nvim_set_keymap("i", "<leader>now"
-	, "<C-R>=strftime('%Y-%m-%d %H:%M')<CR>"
-	, { noremap = true, desc = "Insert currrent datetime"}
+vim.api.nvim_set_keymap("i", "<leader>now",
+  "<C-R>=strftime('%Y-%m-%d %H:%M')<CR>",
+  { noremap = true, desc = "Insert current datetime" }
 )
 
 -- ── RELATIVE NUMBER TOGGLE ────────────────────────────────────────────────────
@@ -578,6 +565,8 @@ vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, {
   callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
 
 -- ── TREESITTER HIGHLIGHT + FOLD ───────────────────────────────────────────────
+-- NOTE: In 0.12, vim.treesitter.get_parser() returns nil on failure instead of
+-- throwing, so pcall is no longer needed — but kept for safety during transition.
 vim.api.nvim_create_autocmd("BufReadPost", {
   group = vim.api.nvim_create_augroup("TSHighlightFold", { clear=true }),
   callback = function(ev)
@@ -595,8 +584,9 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 
     local has_parser = false
     if vim.api.nvim_buf_line_count(buf) <= 10000 then
-      local ok = pcall(vim.treesitter.get_parser, buf)
-      if ok then
+      -- 0.12: get_parser returns nil on failure, no throw
+      local parser = vim.treesitter.get_parser(buf)
+      if parser then
         has_parser = true
         vim.treesitter.stop(buf)
         vim.treesitter.start(buf)
@@ -628,8 +618,6 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 })
 
 -- ── CASCADING .exrc LOADER ────────────────────────────────────────────────────
--- BUG FIX: added augroup + per-session visited cache so each .exrc is sourced
--- at most once, not on every BufEnter.
 local _exrc_sourced = {}
 vim.api.nvim_create_autocmd("BufEnter", {
   group    = vim.api.nvim_create_augroup("ExrcLoader", { clear=true }),
@@ -651,9 +639,6 @@ vim.api.nvim_create_autocmd("BufEnter", {
 })
 
 -- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
--- rg_flags: pre-split argv tokens passed directly to rg_qf — no shell quoting,
--- no vim.split, globs are safe.  Verify these glob patterns match your actual
--- generated-code directory names (original had typos: "thift"/"thiftzg").
 local languages = {
   { pattern = { "c", "cpp" }, tabs = { size=4, expand=false },
     rg_flags = { "--type", "c", "--type", "cpp",
@@ -683,9 +668,6 @@ local function apply_language(lang)
       and table.concat(lang.pattern, "/")
       or  lang.pattern
 
-    -- Buffer-local :Rg shadows the global one in this filetype's buffers.
-    -- Buffer-local commands take priority over global ones, so :Rg and the
-    -- "cabbrev rg Rg" expansion both resolve correctly inside these buffers.
     vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
       rg_qf(
         opts.args,
