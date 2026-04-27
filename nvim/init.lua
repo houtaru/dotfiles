@@ -8,9 +8,10 @@ vim.g.maplocalleader = ","
 local o = vim.opt
 o.number        = true
 o.autoindent    = true
-o.shiftwidth    = 4; o.softtabstop = 4; o.tabstop = 4; o.expandtab = false
+o.shiftwidth    = 4; o.softtabstop = 4; o.tabstop = 4; o.expandtab = true
 o.backspace     = "indent,eol,start"
 o.history       = 1000
+
 o.hlsearch      = true; o.incsearch = true; o.ignorecase = true; o.smartcase = true
 o.mouse         = "a"
 o.textwidth     = 0
@@ -29,6 +30,7 @@ o.updatetime    = 250; o.signcolumn = "yes"
 o.background    = "dark"
 o.termguicolors = true
 o.secure        = true
+o.exrc          = true
 o.scrolloff     = 8; o.sidescrolloff = 8
 o.list = true
 o.listchars = {
@@ -67,18 +69,14 @@ end
 -- ── PLUGINS ───────────────────────────────────────────────────────────────────
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.uv.fs_stat(lazypath) then
-  vim.fn.system({ "git", "clone", "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath })
+  vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath })
 end
 o.rtp:prepend(lazypath)
 
 require("lazy").setup({
-
   { "tomasiser/vim-code-dark", lazy=false, priority=1000 },
+  { "nvim-tree/nvim-web-devicons", lazy=true },
 
-  -- ── COMPLETION ───────────────────────────────────────────────────────────
-  -- blink.cmp: pure Lua completion engine; no coc/Node needed.
-  -- get_lsp_capabilities() returns a capabilities table for vim.lsp.config('*',…)
   {
     "saghen/blink.cmp",
     version = "*",
@@ -86,14 +84,11 @@ require("lazy").setup({
     opts = {
       keymap = {
         preset = "none",
-        ["<C-.>"]     = { "show", "fallback" },
-        ["<C-@>"]     = { "show", "fallback" },
-        ["<C-Space>"] = { "show" },
+        ["<C-Space>"] = { "show", "fallback" },
         ["<Tab>"]     = { "select_next", "snippet_forward", "fallback" },
         ["<S-Tab>"]   = { "select_prev", "snippet_backward", "fallback" },
         ["<CR>"]      = { "accept", "fallback" },
         ["<C-e>"]     = { "cancel" },
-        -- Scroll docs in the popup (replaces coc#float#scroll)
         ["<C-f>"]     = { "scroll_documentation_down", "fallback" },
         ["<C-b>"]     = { "scroll_documentation_up",   "fallback" },
       },
@@ -111,304 +106,132 @@ require("lazy").setup({
     },
   },
 
-  -- ── TREESITTER ── 0.12: branch=main mandatory; configs from top-level ────
   { "nvim-treesitter/nvim-treesitter",
     branch = "main", build = ":TSUpdate",
     event  = "BufReadPost",
     config = function()
       require("nvim-treesitter").setup {
-        ensure_installed = {
-          "c", "cpp", "rust", "go", "bash", "python",
-          "lua", "json", "yaml", "toml", "cmake", "tlaplus",
-        },
+        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus" },
         auto_install = false,
       }
     end,
   },
 
   { "nvim-treesitter/nvim-treesitter-textobjects",
-    branch = "main",
-    event  = "BufReadPost",
+    branch = "main", event = "BufReadPost",
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     config = function()
       require("nvim-treesitter-textobjects").setup { select = { lookahead = true } }
-
       local sel = require("nvim-treesitter-textobjects.select")
       local mov = require("nvim-treesitter-textobjects.move")
-      local swp = require("nvim-treesitter-textobjects.swap")
       local xo  = { "x", "o" }
       local n   = { "n", "x", "o" }
-
-      vim.keymap.set(xo, "af", function() sel.select_textobject("@function.outer","textobjects") end, { desc="KEYMAPS: around function" })
-      vim.keymap.set(xo, "if", function() sel.select_textobject("@function.inner","textobjects") end, { desc="KEYMAPS: inner function" })
-      vim.keymap.set(xo, "ac", function() sel.select_textobject("@class.outer",   "textobjects") end, { desc="KEYMAPS: around class" })
-      vim.keymap.set(xo, "ic", function() sel.select_textobject("@class.inner",   "textobjects") end, { desc="KEYMAPS: inner class" })
-
-      vim.keymap.set(n, "]f", function() mov.goto_next_start("@function.outer",    "textobjects") end, { desc="KEYMAPS: next function start" })
-      vim.keymap.set(n, "[f", function() mov.goto_previous_start("@function.outer","textobjects") end, { desc="KEYMAPS: prev function start" })
-      vim.keymap.set(n, "]F", function() mov.goto_next_end("@function.outer",      "textobjects") end, { desc="KEYMAPS: next function end" })
-      vim.keymap.set(n, "[F", function() mov.goto_previous_end("@function.outer",  "textobjects") end, { desc="KEYMAPS: prev function end" })
-      vim.keymap.set(n, "]C", function() mov.goto_next_end("@class.outer",         "textobjects") end, { desc="KEYMAPS: next class end" })
-      vim.keymap.set(n, "[C", function() mov.goto_previous_end("@class.outer",     "textobjects") end, { desc="KEYMAPS: prev class end" })
-
-      vim.keymap.set(n, "<leader>sn", function() swp.swap_next("@parameter.inner","textobjects") end,     { desc="KEYMAPS: swap arg →" })
-      vim.keymap.set(n, "<leader>sp", function() swp.swap_previous("@parameter.inner","textobjects") end, { desc="KEYMAPS: swap arg ←" })
+      vim.keymap.set(xo, "af", function() sel.select_textobject("@function.outer","textobjects") end)
+      vim.keymap.set(xo, "if", function() sel.select_textobject("@function.inner","textobjects") end)
+      vim.keymap.set(n, "]f", function() mov.goto_next_start("@function.outer", "textobjects") end)
+      vim.keymap.set(n, "[f", function() mov.goto_previous_start("@function.outer","textobjects") end)
     end,
   },
 
-  -- ── GIT ──────────────────────────────────────────────────────────────────
   { "lewis6991/gitsigns.nvim", event="BufReadPost",
     opts = {
-      signs = { add={text="+"}, change={text="~"}, delete={text="_"},
-                topdelete={text="‾"}, changedelete={text="~"} },
+      signs = { add={text="+"}, change={text="~"}, delete={text="_"}, topdelete={text="‾"}, changedelete={text="~"} },
       on_attach = function(buf)
-        local bt  = vim.bo[buf].buftype
-        local win = vim.fn.bufwinid(buf)
-        local in_diff_win = bt == "nofile" and win ~= -1 and vim.wo[win].diff
-        local is_dv_panel = vim.b[buf].diffview_view_initialized ~= nil
-        local is_fugitive = vim.fn.bufname(buf):match("^fugitive://") ~= nil
-        if in_diff_win or is_dv_panel or is_fugitive then return end
-
-        local function gs() return package.loaded.gitsigns end
-        local function m(k, f, d)
-          vim.keymap.set("n", k, f, { buffer=buf, silent=true, desc=d })
-        end
-
-        m("]h", function() local g=gs(); if g then g.next_hunk() end end,              "KEYMAPS: next git hunk")
-        m("[h", function() local g=gs(); if g then g.prev_hunk() end end,              "KEYMAPS: prev git hunk")
-        m("<leader>hp", function() local g=gs(); if g then g.preview_hunk() end end,   "KEYMAPS: preview hunk inline")
-        m("<leader>hs", function() local g=gs(); if g then g.stage_hunk() end end,     "KEYMAPS: stage hunk")
-        m("<leader>hS", function() local g=gs(); if g then g.stage_buffer() end end,   "KEYMAPS: stage entire buffer")
-        m("<leader>hu", function() local g=gs(); if g then g.reset_hunk() end end,     "KEYMAPS: undo/reset hunk")
-        m("<leader>hb", function() local g=gs(); if g then g.blame_line({full=true}) end end, "KEYMAPS: blame line")
+        local gs = package.loaded.gitsigns
+        local function m(k, f, d) vim.keymap.set("n", k, f, { buffer=buf, silent=true, desc=d }) end
+        m("]h", gs.next_hunk, "Next hunk")
+        m("[h", gs.prev_hunk, "Prev hunk")
+        m("<leader>hp", gs.preview_hunk, "Preview hunk")
+        m("<leader>hs", gs.stage_hunk, "Stage hunk")
+        m("<leader>hu", gs.reset_hunk, "Undo/Reset hunk")
       end,
     },
   },
 
-  { "tpope/vim-fugitive",
-    cmd = { "Git","Gedit","Gdiffsplit","Gread","Gwrite","GBrowse","G" },
-  },
+  { "tpope/vim-fugitive", cmd = { "Git","Gedit","Gdiffsplit","Gread","Gwrite","GBrowse","G" } },
 
   { "sindrets/diffview.nvim",
     cmd = { "DiffviewOpen","DiffviewFileHistory","DiffviewClose","DiffviewToggleFiles" },
-    opts = function()
-      local actions = require("diffview.actions")
-      return {
-        keymaps = {
-          view = {
-            { "n", "]h", "]c",                      { desc="KEYMAPS: diffview next diff hunk" } },
-            { "n", "[h", "[c",                      { desc="KEYMAPS: diffview prev diff hunk" } },
-            { "n", "q",  "<cmd>DiffviewClose<CR>",  { desc="KEYMAPS: close diffview" } },
-            { "n", "<leader>hs", actions.stage_all, { desc="KEYMAPS: stage file in diffview" } },
-          },
-          file_panel = {
-            { "n", "]h", actions.select_next_entry,  { desc="KEYMAPS: diffview next file" } },
-            { "n", "[h", actions.select_prev_entry,  { desc="KEYMAPS: diffview prev file" } },
-            { "n", "s",  actions.toggle_stage_entry, { desc="KEYMAPS: stage/unstage file" } },
-            { "n", "q",  "<cmd>DiffviewClose<CR>",   { desc="KEYMAPS: close diffview" } },
-          },
-          file_history_panel = {
-            { "n", "]h", actions.select_next_entry, { desc="KEYMAPS: diffview next entry" } },
-            { "n", "[h", actions.select_prev_entry, { desc="KEYMAPS: diffview prev entry" } },
-            { "n", "q",  "<cmd>DiffviewClose<CR>",  { desc="KEYMAPS: close diffview" } },
-          },
-        },
-      }
-    end,
+    opts = { keymaps = { view = { { "n", "q", "<cmd>DiffviewClose<CR>" } } } },
   },
 
   { "tpope/vim-repeat",     event="VeryLazy" },
-  { "tpope/vim-commentary", event="VeryLazy" },
-  { "kylechui/nvim-surround", event="VeryLazy",
-    config = function() require("nvim-surround").setup() end },
-  { "echasnovski/mini.pairs", event="InsertEnter",
-    config = function() require("mini.pairs").setup() end },
+  { "kylechui/nvim-surround", event="VeryLazy", config = function() require("nvim-surround").setup() end },
+  { "echasnovski/mini.pairs", event="InsertEnter", config = function() require("mini.pairs").setup() end },
 
   { "stevearc/oil.nvim", lazy=false,
     config = function()
       require("oil").setup({
         default_file_explorer = true,
-        buf_options = { buflisted = false, bufhidden = "hide" },
-        delete_to_trash = false,
         skip_confirm_for_simple_edits = true,
         view_options = { show_hidden = true },
-        float = { padding=2, max_width=80, max_height=30, border="rounded" },
+        float = { border="rounded" },
         keymaps = {
           ["g?"]   = "actions.show_help",
-          ["<CR>"] = "actions.select",
-          ["-"]    = "actions.parent",
-          ["_"]    = "actions.open_cwd",
-          ["gs"]   = "actions.change_sort",
-          ["gx"]   = "actions.open_external",
-          ["g."]   = "actions.toggle_hidden",
           ["q"]    = "actions.close",
         },
       })
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern  = "oil",
-        group    = vim.api.nvim_create_augroup("OilNoAutowrite", { clear=true }),
-        callback = function() vim.opt_local.autowrite = false end,
-      })
     end,
-  },
-
-  { "nvim-lualine/lualine.nvim", event="VeryLazy",
-    opts = {
-      options = { theme="codedark", globalstatus=true,
-                  component_separators={left="",right=""},
-                  section_separators={left="",right=""} },
-      sections = {
-        lualine_a = { { "mode", fmt=function(s) return s:sub(1,1) end } },
-        lualine_b = { "branch","diff","diagnostics" },
-        lualine_c = { { "filename", path=1 } },
-        lualine_x = { "filetype" },
-        lualine_y = { "progress" },
-        lualine_z = { "location" },
-      },
-    },
   },
 
   { "ibhagwan/fzf-lua", lazy=true,
     keys = {
-      { "<C-P>",     function() require("fzf-lua").files() end,                                   desc="KEYMAPS: find files" },
-      { "<leader>p", function() require("fzf-lua").files({ cwd=vim.fn.expand("%:p:h") }) end,     desc="KEYMAPS: find files (here)" },
-      { "<leader>e", function() require("fzf-lua").buffers() end,                                 desc="KEYMAPS: switch buffer" },
-      { "<leader>r", function() require("fzf-lua").oldfiles() end,                                desc="KEYMAPS: recent files" },
-      { "g]",        function() require("fzf-lua").tags({ search=vim.fn.expand("<cword>") }) end, desc="KEYMAPS: ctag jump (fzf)" },
+      { "<C-P>",     function() require("fzf-lua").files() end, desc="Find files" },
+      { "<leader>e", function() require("fzf-lua").buffers() end, desc="Buffers" },
+      { "<leader>r", function() require("fzf-lua").oldfiles() end, desc="Recent files" },
     },
-    config = function()
-      require("fzf-lua").setup({
-        winopts  = { height=0.85, width=0.80, preview={ layout="vertical", vertical="down:40%" } },
-        fzf_opts = { ["--layout"]="reverse" },
-      })
-    end,
   },
-
-  { "alexghergh/nvim-tmux-navigation", event="VeryLazy",
-    config = function()
-      local nav = require("nvim-tmux-navigation")
-      nav.setup({ disable_when_zoomed=true })
-      local m = function(k, f) vim.keymap.set({"n","t"}, k, f, { silent=true }) end
-      m("<C-h>", nav.NvimTmuxNavigateLeft);  m("<C-j>", nav.NvimTmuxNavigateDown)
-      m("<C-k>", nav.NvimTmuxNavigateUp);    m("<C-l>", nav.NvimTmuxNavigateRight)
-      m("<C-\\>", nav.NvimTmuxNavigateLastActive)
-    end,
-  },
-
 }, {
   rocks = { enabled = false },
-  performance = {
-    rtp = {
-      disabled_plugins = {
-        "gzip","tarPlugin","tohtml","tutor","zipPlugin",
-        "netrwPlugin","netrw","netrwSettings","netrwFileHandlers",
-        "matchit","matchparen",
-      },
-    },
-  },
+  performance = { rtp = { disabled_plugins = { "gzip","tarPlugin","tohtml","tutor","zipPlugin","netrwPlugin","matchit","matchparen" } } },
 })
 
--- Re-trigger BufReadPost for already-loaded buffers
-vim.api.nvim_create_autocmd("VimEnter", { once=true, callback=function()
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(buf) then
-      vim.api.nvim_exec_autocmds("BufReadPost", { buffer=buf })
-    end
-  end
-end })
-
--- ── COLORSCHEME ───────────────────────────────────────────────────────────────
-vim.cmd.colorscheme("codedark")
-
-local function apply_transparency()
-  local clear_bg = {
-    "Normal","NormalNC","NormalFloat",
-    "LineNr","LineNrAbove","LineNrBelow","CursorLineNr",
-    "SignColumn","FoldColumn",
-    "StatusLine","StatusLineNC","StatusLineTerm","StatusLineTermNC",
-    "VertSplit","WinSeparator",
-    "TabLine","TabLineFill","TabLineSel",
-    "EndOfBuffer",
-  }
-  for _, g in ipairs(clear_bg) do
-    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name=g, link=false })
-    if ok then hl.bg=nil; hl.ctermbg=nil; vim.api.nvim_set_hl(0, g, hl)
-    else       vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
+-- ── NATIVE TMUX NAVIGATION ───────────────────────────────────────────────────
+local function tmux_nav(dir)
+  local win = vim.api.nvim_get_current_win()
+  vim.cmd("wincmd " .. dir)
+  if win == vim.api.nvim_get_current_win() then
+    local tmux_dir = { h = "L", j = "D", k = "U", l = "R" }
+    vim.fn.system("tmux select-pane -" .. tmux_dir[dir])
   end
 end
-local function apply_folded_hl()
-  vim.api.nvim_set_hl(0, "Folded", { fg="#7a9ec2", bg="#1e2a35", italic=true, ctermfg=67, ctermbg=236 })
+vim.keymap.set({"n","t"}, "<C-h>", function() tmux_nav("h") end, { silent = true })
+vim.keymap.set({"n","t"}, "<C-j>", function() tmux_nav("j") end, { silent = true })
+vim.keymap.set({"n","t"}, "<C-k>", function() tmux_nav("k") end, { silent = true })
+vim.keymap.set({"n","t"}, "<C-l>", function() tmux_nav("l") end, { silent = true })
+
+-- ── NATIVE STATUSLINE ─────────────────────────────────────────────────────────
+function _G.statusline()
+  local mode = vim.api.nvim_get_mode().mode:sub(1,1)
+  local file = vim.fn.expand("%:p:~:.")
+  local git = vim.b.gitsigns_status_dict
+  local git_str = git and string.format(" [%s +%s ~%s]", git.head or "?", git.added or 0, git.changed or 0) or ""
+  local diag = vim.diagnostic.count(0)
+  local e, w = diag[1] or 0, diag[2] or 0
+  local diag_str = (e > 0 or w > 0) and string.format(" E:%d W:%d", e, w) or ""
+  return string.format(" %s | %s%s%s %%= %s | %d:%d ", mode, file, git_str, diag_str, vim.bo.filetype, vim.fn.line("."), vim.fn.col("."))
 end
-apply_transparency(); apply_folded_hl()
-
-vim.api.nvim_create_autocmd("ColorScheme", {
-  group    = vim.api.nvim_create_augroup("CodeDarkTransparent", { clear=true }),
-  callback = apply_transparency,
-})
-vim.api.nvim_create_autocmd("ColorScheme", {
-  group    = vim.api.nvim_create_augroup("FoldedHL", { clear=true }),
-  callback = apply_folded_hl,
-})
-
-if (vim.env.TERM or ""):match("^screen") then
-  vim.keymap.set({"n","v"}, "~", "<Nop>")
-end
-
--- ── DIAGNOSTIC CONFIG (0.12) ─────────────────────────────────────────────────
--- :sign-define removed in 0.12. Signs go here.
--- vim.diagnostic.disable() removed in 0.12. Use enable(false,{…}).
-vim.diagnostic.config({
-  virtual_text   = { spacing=4, prefix="●" },
-  signs          = {
-    text = {
-      [vim.diagnostic.severity.ERROR] = "E",
-      [vim.diagnostic.severity.WARN]  = "W",
-      [vim.diagnostic.severity.INFO]  = "I",
-      [vim.diagnostic.severity.HINT]  = "H",
-    },
-  },
-  underline        = true,
-  update_in_insert = false,
-  severity_sort    = true,
-  float            = { border="rounded", source=true },
-})
+o.statusline = "%!v:lua.statusline()"
+o.laststatus = 3
 
 -- ── NATIVE LSP (0.12) ────────────────────────────────────────────────────────
--- vim.lsp.config('*', …) sets global defaults for ALL servers.
--- vim.lsp.config('<name>', …) overrides per-server.
--- vim.lsp.enable({…}) tells nvim which servers to start for matching filetypes.
--- No nvim-lspconfig required; it is optional and only provides lsp/*.lua files.
--- If nvim-lspconfig IS installed, its lsp/ directory is on rtp automatically
--- and vim.lsp.enable will pick up those definitions.
-
--- Global LSP defaults: capabilities + exit_timeout (0.12 graduated feature)
 vim.lsp.config("*", {
   capabilities = (function()
-    -- blink.cmp must be loaded first. Wrap in pcall for cold starts.
     local ok, blink = pcall(require, "blink.cmp")
     return ok and blink.get_lsp_capabilities() or vim.lsp.protocol.make_client_capabilities()
   end)(),
-  -- 0.12: exit_timeout (ms) before stop escalates to force-stop.
-  -- false = wait indefinitely (original default); 1000ms is a good sane value.
   exit_timeout = 1000,
-  root_markers = { ".git" },  -- fallback root if server doesn't define its own
+  root_markers = { ".git", "tags"},
 })
 
-vim.lsp.config("lua_ls", {
-  filetypes = { "lua" },
-  settings = {
-    Lua = {
-      runtime     = { version = "LuaJIT" },
-      diagnostics = { globals = { "vim" } },
-      workspace   = { checkThirdParty = false, library = { vim.env.VIMRUNTIME } },
-      telemetry   = { enable = false },
-    },
-  },
-})
-
+vim.lsp.config("lua_ls", { settings = { Lua = { diagnostics = { globals = { "vim" } } } } })
+vim.lsp.config("rust_analyzer", { cmd = { "rust-analyzer" } })
+vim.lsp.config("gopls",         { cmd = { "gopls" } })
+vim.lsp.config("pyright",       { cmd = { "pyright-langserver", "--stdio" } })
 vim.lsp.config("clangd", {
     filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
     cmd = { "clangd"
+        , "-j=2"
         , "--background-index"
         , "--clang-tidy"
         , "--header-insertion=iwyu"
@@ -418,15 +241,8 @@ vim.lsp.config("clangd", {
     },
 })
 
--- Basic config for other servers
-vim.lsp.config("rust_analyzer", { filetypes = { "rust" }, cmd = { "rust-analyzer" } })
-vim.lsp.config("gopls",         { filetypes = { "go", "gomod" }, cmd = { "gopls" } })
-vim.lsp.config("pyright",       { filetypes = { "python" }, cmd = { "pyright-langserver", "--stdio" } })
-
--- tagfunc: 0.12 native. Always valid; no crash if lsp isn't attached yet.
 vim.o.tagfunc = "v:lua.vim.lsp.tagfunc"
 
--- ── LSP ON-ATTACH KEYMAPS + DOC HIGHLIGHT ────────────────────────────────────
 vim.api.nvim_create_autocmd("LspAttach", {
   group    = vim.api.nvim_create_augroup("LspAttach", { clear=true }),
   callback = function(ev)
@@ -438,7 +254,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
     -- Navigation with ctag/fzf fallback
     local function nav(method)
       return function()
-        local params = vim.lsp.util.make_position_params(0, nil)
+        local client = vim.lsp.get_clients({ bufnr = 0, method = method })[1]
+        local params = vim.lsp.util.make_position_params(0, client and client.offset_encoding or "utf-16")
         vim.lsp.buf_request(0, method, params, function(err, result, ctx)
           if err or not result or (vim.islist(result) and #result == 0) then
             local word = vim.fn.expand("<cword>")
@@ -459,33 +276,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
       end
     end
 
-    m("n", "gd", nav("textDocument/definition"),     "KEYMAPS: go to definition")
-    m("n", "gy", nav("textDocument/typeDefinition"), "KEYMAPS: go to type definition")
-    m("n", "gi", nav("textDocument/implementation"), "KEYMAPS: go to implementation")
-    m("n", "gr", vim.lsp.buf.references,             "KEYMAPS: list references")
-
-    m("n", "K",  vim.lsp.buf.hover,                  "KEYMAPS: hover docs")
-    m("n", "[g", vim.diagnostic.goto_prev,            "KEYMAPS: prev diagnostic")
-    m("n", "]g", vim.diagnostic.goto_next,            "KEYMAPS: next diagnostic")
-    m("n", "gl", vim.diagnostic.open_float,           "KEYMAPS: diagnostic info float")
-
-    m({"n","v"}, "<leader>ca", vim.lsp.buf.code_action, "KEYMAPS: code action")
-    m("n",       "<leader>cr", vim.lsp.buf.rename,      "KEYMAPS: rename symbol")
-    m({"x","n"}, "<leader>f",  function()
-      vim.lsp.buf.format({ async=true })
-    end, "KEYMAPS: format selection/buffer")
-
-    m("n", "<leader>da", function()
-      vim.diagnostic.setloclist({ open=true })
-    end, "KEYMAPS: diagnostics to loclist")
-    m("n", "<space>a", function()
-      vim.diagnostic.setqflist({ open=true })
-    end, "KEYMAPS: all diagnostics (qflist)")
-    m("n", "<space>o", function()
-      require("fzf-lua").lsp_document_symbols()
-    end, "KEYMAPS: file outline (LSP symbols)")
-
-    -- 0.12: toggle diagnostics per buffer
+    m("n", "gd", nav("textDocument/definition"), "Go to definition")
+    m("n", "gy", nav("textDocument/typeDefinition"), "Go to type definition")
+    m("n", "gi", nav("textDocument/implementation"), "Go to implementation")
+    m("n", "gr", vim.lsp.buf.references,         "List references")
+    m("n", "K",  vim.lsp.buf.hover,              "Hover docs")
+    m("n", "[g", vim.diagnostic.goto_prev,            "Prev diagnostic")
+    m("n", "]g", vim.diagnostic.goto_next,            "Next diagnostic")
+    m("n", "gl", vim.diagnostic.open_float,      "Diagnostic info")
+    m({"n","v"}, "<leader>ca", vim.lsp.buf.code_action, "Code action")
+    m("n", "<leader>cr", vim.lsp.buf.rename,      "Rename symbol")
     m("n", "<leader>dd", function()
       local enabled = vim.diagnostic.is_enabled({ bufnr=buf })
       vim.diagnostic.enable(not enabled, { bufnr=buf })
@@ -506,35 +306,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     })
   end,
 })
-
--- ── GIT ───────────────────────────────────────────────────────────────────────
-vim.keymap.set("n", "[d", ":diffget //2<CR>", { silent=true, desc="KEYMAPS: diff get left" })
-vim.keymap.set("n", "]d", ":diffget //3<CR>", { silent=true, desc="KEYMAPS: diff get right" })
-
-vim.keymap.set("n", "<leader>gb", function()
-  vim.ui.input({ prompt="Compare with (branch/commit/tag, empty=HEAD): " }, function(ref)
-    if ref == nil then return end
-    vim.cmd("DiffviewOpen" .. (ref ~= "" and (" "..ref) or ""))
-  end)
-end, { desc="KEYMAPS: git diff vs branch/commit" })
-
-vim.keymap.set("n", "<leader>gh", ":DiffviewFileHistory %<CR>",  { silent=true, desc="KEYMAPS: git history (current file)" })
-vim.keymap.set("n", "<leader>gH", ":DiffviewFileHistory<CR>",    { silent=true, desc="KEYMAPS: git history (whole repo)" })
-vim.keymap.set("n", "<leader>gc", ":DiffviewClose<CR>",          { silent=true, desc="KEYMAPS: close diffview" })
-vim.keymap.set("n", "<leader>gf", ":DiffviewToggleFiles<CR>",    { silent=true, desc="KEYMAPS: toggle diffview panel" })
-vim.keymap.set("n", "<leader>gs", ":Git<CR>",                    { silent=true, desc="KEYMAPS: git status (fugitive)" })
-vim.keymap.set("n", "<leader>gp", ":Git push<CR>",               { silent=true, desc="KEYMAPS: git push" })
-vim.keymap.set("n", "<leader>gl", ":Git log --oneline<CR>",      { silent=true, desc="KEYMAPS: git log" })
-
-vim.keymap.set("n", "<leader>gD", function()
-  vim.ui.input({ prompt="Dir A: ", completion="dir" }, function(a)
-    if not a or a=="" then return end
-    vim.ui.input({ prompt="Dir B: ", completion="dir" }, function(b)
-      if not b or b=="" then return end
-      vim.cmd("DiffviewOpen --dir-a="..vim.fn.fnameescape(a).." --dir-b="..vim.fn.fnameescape(b))
-    end)
-  end)
-end, { desc="KEYMAPS: diff two directories" })
 
 -- ── QUICKFIX & SEARCH ─────────────────────────────────────────────────────────
 local function qf_open()
@@ -562,7 +333,6 @@ local function rg_qf(pattern, extra_flags, title)
   local args = { "rg","--column","--line-number","--no-heading","--smart-case" }
   for _, f in ipairs(extra_flags or {}) do table.insert(args, f) end
   table.insert(args, "--"); table.insert(args, pattern)
-
   vim.system(args, { text=true }, function(result)
     vim.schedule(function()
       if result.code ~= 0 and (not result.stdout or result.stdout=="") then
@@ -578,194 +348,98 @@ local function rg_qf(pattern, extra_flags, title)
 end
 
 vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, { nargs="+" })
-
-vim.keymap.set("v", "<leader>/", function()
-  local saved = vim.fn.getreg("s")
-  vim.cmd('noau normal! "sy')
-  local sel = vim.fn.getreg("s")
-  vim.fn.setreg("s", saved)
-  if sel ~= "" then rg_qf(sel, {}) end
-end, { desc="KEYMAPS: search selected text" })
-
-vim.api.nvim_create_user_command("Gr", function(opts)
-  vim.fn.setqflist({}, "r", { lines=vim.fn.systemlist("grep -rnI "..vim.fn.shellescape(opts.args)) })
-  vim.cmd("copen")
-end, { nargs="?" })
-
 vim.cmd("cabbrev rg Rg")
-vim.cmd("cabbrev gr Gr")
 
-vim.api.nvim_create_user_command("RmTrailing", function(opts)
-  vim.cmd(string.format("%s,%ss/\\s\\+$//e", opts.line1, opts.line2))
-end, { range="%" })
-vim.cmd("cabbrev rmtrailing RmTrailing")
-
--- ── KEYMAPS ───────────────────────────────────────────────────────────────────
-vim.keymap.set("n", "Q", "<Nop>")
-vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="KEYMAPS: yank file path" })
-vim.keymap.set("n", "<C-N>",      function() require("oil").toggle_float() end,             { silent=true, desc="KEYMAPS: toggle explorer (oil)" })
-vim.keymap.set("n", "=j",         ":%!python3 -m json.tool<CR>",                            { desc="KEYMAPS: format JSON" })
-vim.keymap.set("n", "<leader>w",  "<cmd>w<CR>",                                             { desc="KEYMAPS: save file" })
-vim.keymap.set("n", "<leader>x",  "<cmd>bw<CR>",                                            { desc="KEYMAPS: close buffer" })
-vim.keymap.set("n", "<leader>v",  "<cmd>vsplit<CR>",                                        { desc="KEYMAPS: vertical split" })
-vim.keymap.set("n", "<leader>s",  "<cmd>split<CR>",                                         { desc="KEYMAPS: horizontal split" })
-
-vim.keymap.set("n", "<M-Up>",    "<cmd>resize +2<CR>",          { desc="KEYMAPS: resize ↑" })
-vim.keymap.set("n", "<M-Down>",  "<cmd>resize -2<CR>",          { desc="KEYMAPS: resize ↓" })
-vim.keymap.set("n", "<M-Left>",  "<cmd>vertical resize -2<CR>", { desc="KEYMAPS: resize ←" })
-vim.keymap.set("n", "<M-Right>", "<cmd>vertical resize +2<CR>", { desc="KEYMAPS: resize →" })
-
-vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc="KEYMAPS: move selection down" })
-vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc="KEYMAPS: move selection up" })
-vim.keymap.set("n", "<C-d>", "<C-d>zz",       { desc="KEYMAPS: scroll down (centred)" })
-vim.keymap.set("n", "<C-u>", "<C-u>zz",       { desc="KEYMAPS: scroll up (centred)" })
-vim.keymap.set("n", "n",     "nzzzv",          { desc="KEYMAPS: next search (centred)" })
-vim.keymap.set("n", "N",     "Nzzzv",          { desc="KEYMAPS: prev search (centred)" })
-
--- 0.12: i_CTRL-R is literal insert. <C-R>=expr<CR> still works for expr register.
-vim.api.nvim_set_keymap("i", "<leader>now",
-  "<C-R>=strftime('%Y-%m-%d %H:%M')<CR>",
-  { noremap=true, desc="KEYMAPS: insert current datetime" }
-)
-
--- ── RELATIVE NUMBER ──────────────────────────────────────────────────────────
-local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
-vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, { group=rnu,
-  callback=function() if vim.wo.number and vim.fn.mode()~="i" then vim.wo.relativenumber=true end end })
-vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, { group=rnu,
-  callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
-
--- ── TREESITTER HIGHLIGHT + FOLD ───────────────────────────────────────────────
-vim.api.nvim_create_autocmd("BufReadPost", {
-  group = vim.api.nvim_create_augroup("TSHighlightFold", { clear=true }),
-  callback = function(ev)
-    local buf  = ev.buf
-    local name = vim.fn.fnamemodify(ev.file, ":t")
-    local is_fugitive = ev.file:match("^fugitive://") ~= nil
-    local bt   = vim.bo[buf].buftype
-    local win  = vim.fn.bufwinid(buf)
-    local in_diff_win = bt == "nofile" and win ~= -1 and vim.wo[win].diff
-    if is_fugitive or in_diff_win then
-      vim.opt_local.foldmethod = "manual"; vim.opt_local.foldlevel = 20; return
-    end
-
-    local has_parser = false
-    if vim.api.nvim_buf_line_count(buf) <= 10000 then
-      local parser = vim.treesitter.get_parser(buf)   -- nil on failure in 0.12
-      if parser then
-        has_parser = true
-        vim.treesitter.stop(buf); vim.treesitter.start(buf)
-      end
-    end
-
-    if name:match("%.properties$") or name:match("%.log$") then
-      vim.opt_local.foldmethod = "manual"; return
-    end
-
-    if has_parser then
-      vim.schedule(function()
-        if not vim.api.nvim_buf_is_valid(buf) then return end
-        local w = vim.fn.bufwinid(buf)
-        if w == -1 then return end
-        if vim.wo[w].diff then vim.wo[w].foldmethod="manual"; vim.wo[w].foldlevel=20; return end
-        vim.wo[w].foldmethod = "expr"
-        vim.wo[w].foldexpr   = "v:lua.vim.treesitter.foldexpr()"
-      end)
-    else
-      vim.opt_local.foldmethod = "indent"
-    end
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*",
+  callback = function()
+    local save = vim.fn.winsaveview()
+    vim.cmd([[%s/\s\+$//e]])
+    vim.fn.winrestview(save)
   end,
 })
 
--- ── CASCADING .exrc LOADER ────────────────────────────────────────────────────
-local _exrc_sourced = {}
-vim.api.nvim_create_autocmd("BufEnter", {
-  group    = vim.api.nvim_create_augroup("ExrcLoader", { clear=true }),
-  callback = function()
-    local dir = vim.fn.expand("%:p:h")
-    if dir == "" then return end
-    local dirs, prev, cur = {}, "", dir
-    while cur ~= prev do table.insert(dirs, 1, cur); prev=cur; cur=vim.fn.fnamemodify(cur,":h") end
-    for _, d in ipairs(dirs) do
-      local f = d.."/.exrc"
-      if not _exrc_sourced[f] and vim.fn.filereadable(f)==1 then
-        _exrc_sourced[f] = true
-        vim.cmd("sandbox source "..vim.fn.fnameescape(f))
-      end
-    end
-  end,
+-- ── KEYMAPS ───────────────────────────────────────────────────────────────────
+vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="Yank path" })
+vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { silent=true })
+vim.keymap.set("n", "<leader>v", "<cmd>vsplit<CR>")
+vim.keymap.set("n", "<leader>s", "<cmd>split<CR>")
+
+-- ── FILETYPES ────────────────────────────────────────────────────────────────
+vim.filetype.add({
+  extension = {
+    py2 = "python",
+    tla = "tla",
+  }
 })
 
 -- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
-local languages = {
-  { pattern={"c","cpp"}, lsp="clangd", tabs={size=4,expand=false},
-    rg_flags={"--type","c","--type","cpp","-g","!thrift","-g","!thriftzg"} },
-  { pattern="java",      tabs={size=2,expand=false},
-    rg_flags={"--type","java","-g","!thrift","-g","!thriftzg"} },
-  { pattern="rust",      lsp="rust_analyzer", tabs={size=2,expand=false} },
-  { pattern="go",        lsp="gopls", tabs={size=4,expand=false} },
-  { pattern="python",    lsp="pyright", tabs={size=4,expand=true}  },
-  { pattern="sh",        tabs={size=2,expand=true}  },
-  { pattern="lua",       lsp="lua_ls", tabs={size=2,expand=true} },
-  { pattern="vim",       tabs={size=2,expand=true} },
-  { pattern="tla",       tabs={size=2,expand=true}  },
-}
-
-local function apply_language(lang)
-  if lang.tabs then
-    local t = lang.tabs
-    vim.bo.tabstop=t.size; vim.bo.softtabstop=t.size
-    vim.bo.shiftwidth=t.size; vim.bo.expandtab=t.expand
-  end
-  if lang.rg_flags then
-    local ft_label = type(lang.pattern)=="table" and table.concat(lang.pattern,"/") or lang.pattern
-    vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
-      rg_qf(opts.args, lang.rg_flags, (":Rg(%s) %s"):format(ft_label, opts.args))
-    end, { nargs="+", desc="Rg scoped to "..ft_label })
-  end
-  if lang.lsp then
-    vim.lsp.enable(lang.lsp)
-  end
+local function set_tabs(n, expand)
+  vim.bo.tabstop, vim.bo.softtabstop, vim.bo.shiftwidth, vim.bo.expandtab = n, n, n, expand
 end
 
-for _, lang in ipairs(languages) do
-  vim.api.nvim_create_autocmd("FileType", {
-    pattern=lang.pattern, callback=function() apply_language(lang) end,
-  })
+local function set_rg(ft, flags)
+  vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
+    rg_qf(opts.args, flags, (":Rg(%s) %s"):format(ft, opts.args))
+  end, { nargs = "+", desc = "Rg scoped to " .. ft })
 end
 
-vim.api.nvim_create_autocmd({"BufNewFile","BufReadPost"}, {
-  pattern="*.py2", callback=function() vim.bo.filetype="python" end })
-vim.api.nvim_create_autocmd({"BufNewFile","BufReadPost"}, {
-  pattern="*.tla", callback=function() vim.bo.filetype="tla" end })
+local ft = {}
+
+ft.c = function()
+  set_tabs(4, false)
+  set_rg("c/cpp", { "--type", "c", "--type", "cpp", "-g", "!thrift", "-g", "!thriftzg" })
+  vim.lsp.enable("clangd")
+end
+ft.cpp = ft.c
+
+ft.java = function()
+  set_tabs(2, false)
+  set_rg("java", {"--type", "java", "-g", "!thrift", "-g", "!thriftzg"})
+end
+
+ft.rust = function()
+  set_tabs(2, false)
+  vim.lsp.enable("rust-analyzer")
+end
+
+ft.go = function()
+  set_tabs(4, false)
+  vim.lsp.enable("gopls")
+end
+
+ft.python = function()
+  vim.lsp.enable("pyright")
+end
+
+ft.lua = function()
+  set_tabs(2, true)
+  vim.lsp.enable("lua_ls")
+end
+
+ft.sh  = function() set_tabs(2, true) end
+ft.vim = function() set_tabs(2, true) end
+ft.tla = function() set_tabs(2, true) end
+
+vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("LangSettings", { clear = true }),
+  callback = function(ev) if ft[ev.match] then ft[ev.match](ev) end end
+})
+
+-- Relative numbers on focus
+local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
+vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, { group=rnu, callback=function() if vim.wo.number and vim.fn.mode()~="i" then vim.wo.relativenumber=true end end })
+vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, { group=rnu, callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
 
 -- ── SNIPPETS / TEMPLATES ─────────────────────────────────────────────────────
-local function snip_dir()
-  if vim.env.APPDIR then
-    local p = vim.env.APPDIR.."/usr/share/nvim/snippets"
-    if vim.fn.isdirectory(p)==1 then return p end
-  end
-  return vim.fn.fnamemodify(vim.fn.resolve(vim.env.MYVIMRC or
-    (vim.fn.stdpath("config").."/init.lua")), ":h").."/snippets"
-end
-
-vim.api.nvim_create_autocmd("VimEnter", { once=true, callback=function()
-  local name  = vim.trim(vim.fn.system("git config user.name"))
-  local email = vim.trim(vim.fn.system("git config user.email"))
-  vim.g.code_author = name.." ("..email..")"
-end })
-
+local function snip_dir() return vim.fn.stdpath("config").."/snippets" end
 local function apply_template(path)
-  if vim.fn.filereadable(path)==0 then
-    vim.notify("Template not found: "..path, vim.log.levels.WARN); return
-  end
+  if vim.fn.filereadable(path)==0 then return end
   local out, cursor = {}, {0,0}
+  local author = vim.trim(vim.fn.system("git config user.name"))
   local classname = vim.fn.expand("%:t:r"):gsub("^%l", string.upper)
   for row, line in ipairs(vim.fn.readfile(path)) do
-    line = line:gsub("{{FILE}}",   vim.fn.expand("%:t"))
-                :gsub("{{AUTHOR}}", vim.g.code_author or "")
-                :gsub("{{DATE}}",   vim.fn.strftime("%B %d, %Y, %I:%M %p"))
-                :gsub("{{CLASS}}",  classname)
+    line = line:gsub("{{FILE}}", vim.fn.expand("%:t")):gsub("{{AUTHOR}}", author):gsub("{{DATE}}", vim.fn.strftime("%B %d, %Y")):gsub("{{CLASS}}", classname)
     local ci = line:find("{{CURSOR}}")
     if ci then cursor={row,ci}; line=line:gsub("{{CURSOR}}","") end
     table.insert(out, line)
@@ -775,31 +449,15 @@ local function apply_template(path)
 end
 
 vim.api.nvim_create_user_command("Snipcode", function(opts)
-  local ft = opts.args~="" and vim.trim(opts.args)
-          or (vim.bo.filetype~="" and vim.bo.filetype or vim.fn.expand("%:e"))
-  if ft=="" then vim.notify("Snipcode: cannot determine filetype.", vim.log.levels.WARN); return end
+  local ft = opts.args~="" and opts.args or vim.bo.filetype
   apply_template(snip_dir().."/template."..ft)
 end, { nargs="?" })
 
-vim.api.nvim_create_user_command("Snipmake", function(opts)
-  local ft   = opts.args~="" and vim.trim(opts.args) or (vim.bo.filetype or "")
-  local sdir = snip_dir()
-  local tpl  = ft~="" and (sdir.."/"..ft..".make") or ""
-  if tpl=="" or vim.fn.filereadable(tpl)==0 then tpl=sdir.."/default.make" end
-  if vim.fn.filereadable(tpl)==0 then
-    vim.notify("Snipmake: no template found in "..sdir, vim.log.levels.ERROR); return
-  end
-  local abs = vim.fn.getcwd().."/Makefile"
-  if vim.fn.filereadable(abs)==1 then
-    vim.ui.input({ prompt="Makefile exists. Overwrite? [y/N] " }, function(answer)
-      if answer==nil or answer:lower()~="y" then
-        vim.notify("Snipmake: aborted.", vim.log.levels.INFO); return
-      end
-      vim.fn.writefile(vim.fn.readfile(tpl), abs)
-      vim.notify("Snipmake: written from "..tpl, vim.log.levels.INFO)
-    end)
-  else
-    vim.fn.writefile(vim.fn.readfile(tpl), abs)
-    vim.notify("Snipmake: written from "..tpl, vim.log.levels.INFO)
-  end
-end, { nargs="?" })
+-- ── COLORSCHEME ───────────────────────────────────────────────────────────────
+vim.cmd.colorscheme("codedark")
+local function apply_transparency()
+  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer" }
+  for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
+end
+apply_transparency()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_transparency })
