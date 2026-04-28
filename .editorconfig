@@ -1,0 +1,53 @@
+# ~/.editorconfig  (global fallback — place at $HOME)
+# https://editorconfig.org
+root = true
+
+[*]
+charset                  = utf-8
+end_of_line              = lf
+insert_final_newline     = true
+trim_trailing_whitespace = true
+
+# ── C / C++ ───────────────────────────────────────────────────────────────────
+[*.{c,h,cc,cpp,cxx,hh,hpp,hxx}]
+indent_style = tab
+indent_size  = 4
+
+# ── Java ──────────────────────────────────────────────────────────────────────
+[*.java]
+indent_style = tab
+indent_size  = 4
+
+# ── Rust ──────────────────────────────────────────────────────────────────────
+[*.rs]
+indent_style = space
+indent_size  = 2
+
+# ── Go ────────────────────────────────────────────────────────────────────────
+[*.go]
+indent_style = tab
+indent_size  = 4
+
+# ── Python ────────────────────────────────────────────────────────────────────
+[*.{py,py2}]
+indent_style = space
+indent_size  = 4
+
+# ── Lua ───────────────────────────────────────────────────────────────────────
+[*.lua]
+indent_style = space
+indent_size  = 4
+
+# ── Shell / Vim / TLA+ ────────────────────────────────────────────────────────
+[*.{sh,bash,zsh,vim,tla}]
+indent_style = space
+indent_size  = 2
+
+# ── Data / config formats ─────────────────────────────────────────────────────
+[*.{json,yaml,yml,toml}]
+indent_style = space
+indent_size  = 2
+
+# ── Makefiles must use tabs ───────────────────────────────────────────────────
+[{Makefile,*.mk}]
+indent_style = tab

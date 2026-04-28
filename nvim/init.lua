@@ -4,74 +4,12 @@
 vim.g.mapleader      = ","
 vim.g.maplocalleader = ","
 
--- ── OPTIONS ───────────────────────────────────────────────────────────────────
-local o = vim.opt
-o.number        = true
-o.autoindent    = true
-o.shiftwidth    = 4; o.softtabstop = 4; o.tabstop = 4; o.expandtab = true
-o.backspace     = "indent,eol,start"
-o.history       = 1000
-
-o.hlsearch      = true; o.incsearch = true; o.ignorecase = true; o.smartcase = true
-o.mouse         = "a"
-o.textwidth     = 0
-o.splitbelow    = true; o.splitright = true
-o.foldmethod    = "indent"; o.foldlevel = 20
-o.diffopt:append("followwrap,algorithm:histogram,indent-heuristic")
-o.autoread      = true; o.autowrite = true
-o.showcmd       = true; o.ruler = true
-o.timeout       = true; o.timeoutlen = 500
-o.visualbell    = true; o.errorbells = false
-o.display       = "lastline,uhex"
-o.colorcolumn   = "80,100"
-o.switchbuf     = "useopen,usetab"
-o.backup        = false; o.writebackup = false
-o.updatetime    = 250; o.signcolumn = "yes"
-o.background    = "dark"
-o.termguicolors = true
-o.secure        = true
-o.exrc          = true
-o.scrolloff     = 8; o.sidescrolloff = 8
-o.list = true
-o.listchars = {
-  eol="¬", trail="·", nbsp="◇", tab="→ ",
-  extends="▸", precedes="◂", multispace="···⬝", leadmultispace="│   ",
-}
-
-vim.api.nvim_create_autocmd("ColorScheme", {
-  group = vim.api.nvim_create_augroup("WhitespaceHL", { clear=true }),
-  callback = function()
-    for _, g in ipairs({ "Whitespace", "NonText", "SpecialKey" }) do
-      vim.api.nvim_set_hl(0, g, { fg="#4a4a4a", ctermfg=238, bg="none" })
-    end
-  end,
-})
-
--- ── CLIPBOARD ────────────────────────────────────────────────────────────────
-do
-  local has_provider = (
-    vim.fn.executable("xclip")     == 1 or
-    vim.fn.executable("xsel")      == 1 or
-    vim.fn.executable("wl-copy")   == 1 or
-    vim.fn.executable("pbcopy")    == 1 or
-    vim.fn.executable("win32yank") == 1
-  )
-  if has_provider then
-    o.clipboard = "unnamedplus"
-  else
-    vim.notify(
-      "[clipboard] No provider found (xclip/xsel/wl-copy/pbcopy). Install one.",
-      vim.log.levels.WARN
-    )
-  end
-end
-
 -- ── PLUGINS ───────────────────────────────────────────────────────────────────
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath })
 end
-o.rtp:prepend(lazypath)
+vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
   { "tomasiser/vim-code-dark", lazy=false, priority=1000 },
@@ -186,6 +124,105 @@ require("lazy").setup({
   performance = { rtp = { disabled_plugins = { "gzip","tarPlugin","tohtml","tutor","zipPlugin","netrwPlugin","matchit","matchparen" } } },
 })
 
+-- ── OPTIONS ───────────────────────────────────────────────────────────────────
+local o = vim.opt
+o.number        = true
+o.autoindent    = true
+o.backspace     = "indent,eol,start"
+o.history       = 1000
+
+o.hlsearch      = true; o.incsearch = true; o.ignorecase = true; o.smartcase = true
+o.mouse         = "a"
+o.textwidth     = 0
+o.splitbelow    = true; o.splitright = true
+o.foldmethod    = "indent"; o.foldlevel = 20
+o.diffopt:append("followwrap,algorithm:histogram,indent-heuristic")
+o.autoread      = true; o.autowrite = true
+o.showcmd       = true; o.ruler = true
+o.timeout       = true; o.timeoutlen = 500
+o.visualbell    = true; o.errorbells = false
+o.display       = "lastline,uhex"
+o.colorcolumn   = "80,100"
+o.switchbuf     = "useopen,usetab"
+o.backup        = false; o.writebackup = false
+o.updatetime    = 250; o.signcolumn = "yes"
+o.background    = "dark"
+o.termguicolors = true
+o.secure        = true
+o.exrc          = true
+o.scrolloff     = 8; o.sidescrolloff = 8
+o.list = true
+o.listchars = {
+  eol="¬", trail="·", nbsp="◇", tab="→ ",
+  extends="▸", precedes="◂", multispace="···⬝", leadmultispace="│   ",
+}
+
+-- Relative numbers on focus
+local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
+vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, { group=rnu, callback=function() if vim.wo.number and vim.fn.mode()~="i" then vim.wo.relativenumber=true end end })
+vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, { group=rnu, callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("WhitespaceHL", { clear=true }),
+  callback = function()
+    for _, g in ipairs({ "Whitespace", "NonText", "SpecialKey" }) do
+      vim.api.nvim_set_hl(0, g, { fg="#4a4a4a", ctermfg=238, bg="none" })
+    end
+  end,
+})
+
+-- ── DIAGNOSTICS ───────────────────────────────────────────────────────────────
+vim.diagnostic.config({
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = "✘",
+      [vim.diagnostic.severity.WARN]  = "▲",
+      [vim.diagnostic.severity.INFO]  = "●",
+      [vim.diagnostic.severity.HINT]  = "⚑",
+    },
+  },
+  virtual_text = {
+    prefix  = "",
+    spacing = 2,
+    format  = function(d)
+      local prefix = ({ "✘ ", "▲ ", "● ", "⚑ " })[d.severity]
+      return prefix .. d.message
+    end,
+  },
+  underline        = true,
+  update_in_insert = false,
+  severity_sort    = true,
+  float = { border = "rounded", source = true },
+})
+
+-- ── COLORSCHEME ───────────────────────────────────────────────────────────────
+vim.cmd.colorscheme("codedark")
+local function apply_transparency()
+  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded" }
+  for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
+end
+apply_transparency()
+vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_transparency })
+
+-- ── CLIPBOARD ────────────────────────────────────────────────────────────────
+do
+  local has_provider = (
+    vim.fn.executable("xclip")     == 1 or
+    vim.fn.executable("xsel")      == 1 or
+    vim.fn.executable("wl-copy")   == 1 or
+    vim.fn.executable("pbcopy")    == 1 or
+    vim.fn.executable("win32yank") == 1
+  )
+  if has_provider then
+    o.clipboard = "unnamedplus"
+  else
+    vim.notify(
+      "[clipboard] No provider found (xclip/xsel/wl-copy/pbcopy). Install one.",
+      vim.log.levels.WARN
+    )
+  end
+end
+
 -- ── NATIVE TMUX NAVIGATION ───────────────────────────────────────────────────
 local function tmux_nav(dir)
   local win = vim.api.nvim_get_current_win()
@@ -276,20 +313,23 @@ vim.api.nvim_create_autocmd("LspAttach", {
       end
     end
 
-    m("n", "gd", nav("textDocument/definition"), "Go to definition")
-    m("n", "gy", nav("textDocument/typeDefinition"), "Go to type definition")
-    m("n", "gi", nav("textDocument/implementation"), "Go to implementation")
-    m("n", "gr", vim.lsp.buf.references,         "List references")
-    m("n", "K",  vim.lsp.buf.hover,              "Hover docs")
-    m("n", "[g", vim.diagnostic.goto_prev,            "Prev diagnostic")
-    m("n", "]g", vim.diagnostic.goto_next,            "Next diagnostic")
-    m("n", "gl", vim.diagnostic.open_float,      "Diagnostic info")
-    m({"n","v"}, "<leader>ca", vim.lsp.buf.code_action, "Code action")
-    m("n", "<leader>cr", vim.lsp.buf.rename,      "Rename symbol")
+    m("n", "gd",                nav("textDocument/definition"),        "Go to definition")
+    m("n", "gy",                nav("textDocument/typeDefinition"),    "Go to type definition")
+    m("n", "gi",                nav("textDocument/implementation"),    "Go to implementation")
+    m({"n","v"}, "<leader>ca",  vim.lsp.buf.code_action,               "Code action")
+    m("n", "<leader>cr",        vim.lsp.buf.rename,                    "Rename symbol")
+    m("n", "gr",                vim.lsp.buf.references,                "List references")
+    m("n", "K",                 vim.lsp.buf.hover,                     "Hover docs")
+    m("n", "gl",                vim.diagnostic.open_float,             "Diagnostic info")
+    m("n", "[g", function() vim.diagnostic.jump({count = -1, float = true}) end, "Prev diagnostic")
+    m("n", "]g", function() vim.diagnostic.jump({count = 1, float = true}) end, "Next diagnostic")
     m("n", "<leader>dd", function()
       local enabled = vim.diagnostic.is_enabled({ bufnr=buf })
       vim.diagnostic.enable(not enabled, { bufnr=buf })
-    end, "KEYMAPS: toggle diagnostics (buffer)")
+    end, "Toggle diagnostics (buffer)")
+
+    m("n", "<leader>dq", function() vim.diagnostic.setqflist({ open = true }) end, "Diagnostics to quickfix (buffer)")
+    m("n", "<leader>dQ", function() vim.diagnostic.setqflist({ open = true, workspace = true }) end, "Diagnostics to quickfix (workspace)")
 
     -- Document highlight on CursorHold (replaces coc highlight)
     -- Scoped augroup per buffer avoids accumulation on many open files.
@@ -350,15 +390,6 @@ end
 vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, { nargs="+" })
 vim.cmd("cabbrev rg Rg")
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*",
-  callback = function()
-    local save = vim.fn.winsaveview()
-    vim.cmd([[%s/\s\+$//e]])
-    vim.fn.winrestview(save)
-  end,
-})
-
 -- ── KEYMAPS ───────────────────────────────────────────────────────────────────
 vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="Yank path" })
 vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { silent=true })
@@ -374,9 +405,6 @@ vim.filetype.add({
 })
 
 -- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
-local function set_tabs(n, expand)
-  vim.bo.tabstop, vim.bo.softtabstop, vim.bo.shiftwidth, vim.bo.expandtab = n, n, n, expand
-end
 
 local function set_rg(ft, flags)
   vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
@@ -387,24 +415,20 @@ end
 local ft = {}
 
 ft.c = function()
-  set_tabs(4, false)
   set_rg("c/cpp", { "--type", "c", "--type", "cpp", "-g", "!thrift", "-g", "!thriftzg" })
   vim.lsp.enable("clangd")
 end
 ft.cpp = ft.c
 
 ft.java = function()
-  set_tabs(2, false)
   set_rg("java", {"--type", "java", "-g", "!thrift", "-g", "!thriftzg"})
 end
 
 ft.rust = function()
-  set_tabs(2, false)
   vim.lsp.enable("rust-analyzer")
 end
 
 ft.go = function()
-  set_tabs(4, false)
   vim.lsp.enable("gopls")
 end
 
@@ -413,23 +437,13 @@ ft.python = function()
 end
 
 ft.lua = function()
-  set_tabs(2, true)
   vim.lsp.enable("lua_ls")
 end
-
-ft.sh  = function() set_tabs(2, true) end
-ft.vim = function() set_tabs(2, true) end
-ft.tla = function() set_tabs(2, true) end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("LangSettings", { clear = true }),
   callback = function(ev) if ft[ev.match] then ft[ev.match](ev) end end
 })
-
--- Relative numbers on focus
-local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
-vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, { group=rnu, callback=function() if vim.wo.number and vim.fn.mode()~="i" then vim.wo.relativenumber=true end end })
-vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, { group=rnu, callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
 
 -- ── SNIPPETS / TEMPLATES ─────────────────────────────────────────────────────
 local function snip_dir() return vim.fn.stdpath("config").."/snippets" end
@@ -452,12 +466,3 @@ vim.api.nvim_create_user_command("Snipcode", function(opts)
   local ft = opts.args~="" and opts.args or vim.bo.filetype
   apply_template(snip_dir().."/template."..ft)
 end, { nargs="?" })
-
--- ── COLORSCHEME ───────────────────────────────────────────────────────────────
-vim.cmd.colorscheme("codedark")
-local function apply_transparency()
-  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer" }
-  for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
-end
-apply_transparency()
-vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_transparency })
