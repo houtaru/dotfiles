@@ -1,0 +1,15 @@
+{
+  "name": "ijika-snippets",
+  "contributes": {
+    "snippets": [
+      {
+        "language": "cpp",
+        "path": "./cpp.json"
+      },
+      {
+        "language": "make",
+        "path": "./make.json"
+      }
+    ]
+  }
+}

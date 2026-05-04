@@ -2,19 +2,14 @@
 # ~/.zshrc  —  unified shell config (zsh, macOS + Linux)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── OH-MY-ZSH ────────────────────────────────────────────────────────────────
-export ZSH="$HOME/.oh-my-zsh"
-zstyle ':omz:update' mode disabled
-DISABLE_UNTRACKED_FILES_DIRTY="true"
-
-plugins=(
-    git
-    history
-    zsh-autosuggestions
-    zsh-syntax-highlighting
-)
-
-source $ZSH/oh-my-zsh.sh
+# ── ZINIT (Performance & Workflow Optimized) ─────────────────────────────────
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+[ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)" && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" 2>/dev/null
+source "${ZINIT_HOME}/zinit.zsh"
+zinit light zsh-users/zsh-autosuggestions
+zinit light zsh-users/zsh-syntax-highlighting
+zinit snippet OMZP::git
+zinit snippet OMZP::history
 
 # ── OS DETECTION ─────────────────────────────────────────────────────────────
 IS_MAC=false
@@ -51,14 +46,6 @@ $IS_MAC && export PATH="/opt/homebrew/bin:$PATH"
 # yarn
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 
-# nvm / node — prefer nvm-managed node
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ]            && source "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ]   && source "$NVM_DIR/bash_completion"
-# fallback pinned node path (only used when nvm isn't active)
-[ -d "$HOME/.nvm/versions/node/v18.12.1/bin" ] && \
-    export PATH="$HOME/.nvm/versions/node/v18.12.1/bin:$PATH"
-
 # golang
 if $IS_MAC && command -v brew &>/dev/null; then
     export GOROOT="$(brew --prefix golang 2>/dev/null)"
@@ -83,6 +70,16 @@ fi
 
 # ── HOMEBREW ─────────────────────────────────────────────────────────────────
 export HOMEBREW_NO_AUTO_UPDATE=1
+
+# ── COMPLETION ──────────────────────────────────────────────────────────────
+# Case-insensitive completion & partial word matching
+# '' allows exact match first, then tries case-insensitive, then partial
+zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=* l:|=*'
+
+autoload -Uz compinit && compinit -i
+
+# Replay completions to apply styles (Zinit specific)
+zinit cdreplay -q
 
 # ── PROMPT ───────────────────────────────────────────────────────────────────
 autoload -Uz vcs_info

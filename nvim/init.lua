@@ -446,23 +446,4 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- ── SNIPPETS / TEMPLATES ─────────────────────────────────────────────────────
-local function snip_dir() return vim.fn.stdpath("config").."/snippets" end
-local function apply_template(path)
-  if vim.fn.filereadable(path)==0 then return end
-  local out, cursor = {}, {0,0}
-  local author = vim.trim(vim.fn.system("git config user.name"))
-  local classname = vim.fn.expand("%:t:r"):gsub("^%l", string.upper)
-  for row, line in ipairs(vim.fn.readfile(path)) do
-    line = line:gsub("{{FILE}}", vim.fn.expand("%:t")):gsub("{{AUTHOR}}", author):gsub("{{DATE}}", vim.fn.strftime("%B %d, %Y")):gsub("{{CLASS}}", classname)
-    local ci = line:find("{{CURSOR}}")
-    if ci then cursor={row,ci}; line=line:gsub("{{CURSOR}}","") end
-    table.insert(out, line)
-  end
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, out)
-  if cursor[1]~=0 then vim.fn.cursor(cursor[1], cursor[2]) end
-end
-
-vim.api.nvim_create_user_command("Snipcode", function(opts)
-  local ft = opts.args~="" and opts.args or vim.bo.filetype
-  apply_template(snip_dir().."/template."..ft)
-end, { nargs="?" })
+-- Handled by blink.cmp via JSON snippets in ~/.config/nvim/snippets/package.json
