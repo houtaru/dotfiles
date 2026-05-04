@@ -284,6 +284,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
   group    = vim.api.nvim_create_augroup("LspAttach", { clear=true }),
   callback = function(ev)
     local buf = ev.buf
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
+      vim.lsp.inlay_hint.enable(true, { bufnr = buf })
+    end
+
     local m   = function(mode, lhs, rhs, desc)
       vim.keymap.set(mode, lhs, rhs, { buffer=buf, silent=true, desc=desc })
     end
@@ -395,6 +400,29 @@ vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%
 vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { silent=true })
 vim.keymap.set("n", "<leader>v", "<cmd>vsplit<CR>")
 vim.keymap.set("n", "<leader>s", "<cmd>split<CR>")
+vim.keymap.set("n", "<leader>gf", function()
+  local params = { textDocument = vim.lsp.util.make_text_document_params() }
+  vim.lsp.buf_request(0, "textDocument/documentSymbol", params, function(err, result)
+    if err or not result then return print("No function found") end
+    local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+    local path = {}
+    local function walk(syms)
+      for _, s in ipairs(syms) do
+        local r = s.range or (s.location and s.location.range)
+        if r and r.start.line <= row and r["end"].line >= row then
+          -- 3:Namespace, 5:Class, 6:Method, 11:Interface, 12:Function, 23:Struct
+          if s.kind == 3 or s.kind == 5 or s.kind == 6 or s.kind == 11 or s.kind == 12 or s.kind == 23 then
+            table.insert(path, s.name)
+          end
+          if s.children then walk(s.children) end
+          return
+        end
+      end
+    end
+    walk(result)
+    print(#path > 0 and table.concat(path, "::") or "No function context")
+  end)
+end, { desc = "Print function context (LSP)" })
 
 -- ── FILETYPES ────────────────────────────────────────────────────────────────
 vim.filetype.add({
