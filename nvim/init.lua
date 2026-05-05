@@ -420,7 +420,13 @@ vim.keymap.set("n", "<leader>gf", function()
       end
     end
     walk(result)
-    print(#path > 0 and table.concat(path, "::") or "No function context")
+    if #path > 0 then
+      local msg = table.concat(path, "::")
+      vim.notify(msg)
+      vim.fn.setreg("+", msg)
+    else
+      vim.notify("No function context")
+    end
   end)
 end, { desc = "Print function context (LSP)" })
 

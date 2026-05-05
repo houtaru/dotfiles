@@ -7,6 +7,7 @@ style = "Regular"
 
 [window]
 option_as_alt = "Both"
+opacity = 0.85
 
 [general]
 live_config_reload = false
