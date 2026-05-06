@@ -16,15 +16,37 @@ IS_MAC=false
 IS_LINUX=false
 [[ $(uname -s) == "Darwin" ]] && IS_MAC=true || IS_LINUX=true
 
-# ── HISTORY ──────────────────────────────────────────────────────────────────
+# ── HISTORY & OPTIONS ────────────────────────────────────────────────────────
+export HISTFILE="$HOME/.zsh_history"
 export HISTSIZE=32768
-export HISTFILESIZE=$HISTSIZE
-export HISTCONTROL=ignoredups
-export HISTIGNORE="ls:cd:cd -:pwd:exit:date:* --help"
-# Don't store duplicates, share history across sessions
-setopt HIST_IGNORE_DUPS
-setopt HIST_IGNORE_ALL_DUPS
-setopt SHARE_HISTORY
+export SAVEHIST=32768
+# Zsh equivalent of HISTIGNORE
+export HISTORY_IGNORE="(ls|cd|pwd|exit|date|* --help)"
+
+# History options
+setopt EXTENDED_HISTORY          # Save timestamps
+setopt INC_APPEND_HISTORY        # Write to history file immediately
+setopt SHARE_HISTORY             # Share history across sessions
+setopt HIST_IGNORE_SPACE         # Don't record commands starting with space
+setopt HIST_IGNORE_DUPS          # Don't record consecutive duplicates
+setopt HIST_IGNORE_ALL_DUPS      # Delete old duplicate event if new one is recorded
+setopt HIST_EXPIRE_DUPS_FIRST    # When file is full, delete duplicates first
+setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks before recording
+setopt HIST_VERIFY               # Don't execute immediately upon history expansion
+
+# Completion & Navigation
+setopt AUTO_CD                   # cd by typing directory name
+setopt AUTO_PUSHD                # Push dirs onto stack automatically
+setopt PUSHD_IGNORE_DUPS         # Don't push duplicates on stack
+setopt COMPLETE_IN_WORD          # Complete from both ends of a word
+setopt ALWAYS_TO_END             # Move cursor to end if word had one match
+setopt AUTO_MENU                 # Show completion menu on successive tab press
+unsetopt MENU_COMPLETE           # Do not autoselect the first completion entry
+
+# General
+setopt PROMPT_SUBST              # Enable parameter expansion in prompt
+setopt INTERACTIVE_COMMENTS      # Allow # comments in interactive shell
+unsetopt BEEP                    # Disable terminal bell
 
 # ── LOCALE ───────────────────────────────────────────────────────────────────
 export LANG="en_US.UTF-8"
@@ -45,6 +67,14 @@ $IS_MAC && export PATH="/opt/homebrew/bin:$PATH"
 
 # yarn
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+
+# nvm / node — prefer nvm-managed node
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ]            && source "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ]   && source "$NVM_DIR/bash_completion"
+# fallback pinned node path (only used when nvm isn't active)
+[ -d "$HOME/.nvm/versions/node/v18.12.1/bin" ] && \
+    export PATH="$HOME/.nvm/versions/node/v18.12.1/bin:$PATH"
 
 # golang
 if $IS_MAC && command -v brew &>/dev/null; then
@@ -107,7 +137,6 @@ zstyle ':vcs_info:git*+set-message:*' hooks git-status
 }
 
 local exit_code_prompt='%(?..%B%F{red}%?%f%b )'
-setopt prompt_subst
 PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
