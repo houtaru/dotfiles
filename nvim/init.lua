@@ -441,6 +441,10 @@ vim.filetype.add({
 
 -- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
 
+require("editorconfig").properties.enable_lsp = function(bufnr, val)
+  vim.b[bufnr].editorconfig = vim.tbl_extend("keep", vim.b[bufnr].editorconfig or {}, { enable_lsp = val })
+end
+
 local function set_rg(ft, flags)
   vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
     rg_qf(opts.args, flags, (":Rg(%s) %s"):format(ft, opts.args))
@@ -478,8 +482,12 @@ end
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("LangSettings", { clear = true }),
   callback = function(ev)
-    if vim.b.editorconfig and vim.b.editorconfig.enable_lsp == "false" then return end
-    if ft[ev.match] then ft[ev.match](ev) end
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+      local b = vim.b[ev.buf]
+      if b.editorconfig and b.editorconfig.enable_lsp == "false" then return end
+      if ft[ev.match] then ft[ev.match](ev) end
+    end)
   end
 })
 
