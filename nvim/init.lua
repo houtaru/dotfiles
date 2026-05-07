@@ -1,8 +1,9 @@
 -- ~/.config/nvim/init.lua  (Neovim 0.12)
 
--- ── LEADER ───────────────────────────────────────────────────────────────────
+-- ── GLOBALS ───────────────────────────────────────────────────────────────────
 vim.g.mapleader      = ","
 vim.g.maplocalleader = ","
+vim.g.editorconfig = true
 
 -- ── PLUGINS ───────────────────────────────────────────────────────────────────
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -86,7 +87,20 @@ require("lazy").setup({
     },
   },
 
-  { "tpope/vim-fugitive", cmd = { "Git","Gedit","Gdiffsplit","Gread","Gwrite","GBrowse","G" } },
+  { "tpope/vim-fugitive",
+    cmd = { "Git","Gedit","Gdiffsplit","Gread","Gwrite","GBrowse","G" },
+    config = function()
+      vim.api.nvim_create_autocmd("BufWinEnter", {
+        callback = function()
+          if vim.wo.diff and vim.fn.bufname("%"):match("^fugitive://") then
+            vim.keymap.set("n", "[d", "<cmd>diffget //2<CR>", { buffer=true, desc="diffget LOCAL" })
+            vim.keymap.set("n", "]d", "<cmd>diffget //3<CR>", { buffer=true, desc="diffget REMOTE" })
+          end
+        end
+      })
+    end
+  },
+
 
   { "sindrets/diffview.nvim",
     cmd = { "DiffviewOpen","DiffviewFileHistory","DiffviewClose","DiffviewToggleFiles" },
@@ -293,34 +307,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.keymap.set(mode, lhs, rhs, { buffer=buf, silent=true, desc=desc })
     end
 
-    -- Navigation with ctag/fzf fallback
-    local function nav(method)
-      return function()
-        local client = vim.lsp.get_clients({ bufnr = 0, method = method })[1]
-        local params = vim.lsp.util.make_position_params(0, client and client.offset_encoding or "utf-16")
-        vim.lsp.buf_request(0, method, params, function(err, result, ctx)
-          if err or not result or (vim.islist(result) and #result == 0) then
-            local word = vim.fn.expand("<cword>")
-            if vim.fn.taglist("^"..word.."$")[1] then
-              require("fzf-lua").tags({ search=word })
-            else
-              vim.fn.searchdecl(word)
-            end
-            return
-          end
-
-          local client = vim.lsp.get_client_by_id(ctx.client_id)
-          local enc = client and client.offset_encoding or "utf-16"
-          local location = vim.islist(result) and result[1] or result
-
-          vim.lsp.util.show_document(location, enc, { focus = true })
-        end)
-      end
-    end
-
-    m("n", "gd",                nav("textDocument/definition"),        "Go to definition")
-    m("n", "gy",                nav("textDocument/typeDefinition"),    "Go to type definition")
-    m("n", "gi",                nav("textDocument/implementation"),    "Go to implementation")
+    m("n", "gd",                vim.lsp.buf.definition,                "Go to definition")
+    m("n", "gy",                vim.lsp.buf.type_definition,           "Go to type definition")
+    m("n", "gi",                vim.lsp.buf.implementation,            "Go to implementation")
     m({"n","v"}, "<leader>ca",  vim.lsp.buf.code_action,               "Code action")
     m("n", "<leader>cr",        vim.lsp.buf.rename,                    "Rename symbol")
     m("n", "gr",                vim.lsp.buf.references,                "List references")
@@ -370,6 +359,18 @@ vim.keymap.set("n", "<leader>n", function() vim.cmd(qf_in_tab() and "cnext" or "
   { desc="KEYMAPS: next qf item / buffer" })
 vim.keymap.set("n", "<leader>b", function() vim.cmd(qf_in_tab() and "cprev" or "bprev") end,
   { desc="KEYMAPS: prev qf item / buffer" })
+
+vim.keymap.set("n", "g]", function()
+  local w = vim.fn.expand("<cword>")
+  local t = vim.fn.taglist("^"..w.."$")
+  if #t == 0 then return vim.notify("No tags: "..w, 2) end
+  local items = {}
+  for _, v in ipairs(t) do
+    table.insert(items, { filename=v.filename, text=v.name, lnum=tonumber(v.cmd), pattern=not tonumber(v.cmd) and v.cmd:sub(2,-2) or nil })
+  end
+  vim.fn.setqflist({}, "r", { title="Tags: "..w, items=items })
+  vim.cmd("copen")
+end, { desc="Search tags to quickfix" })
 
 local function rg_qf(pattern, extra_flags, title)
   if not pattern or pattern == "" then
@@ -476,8 +477,9 @@ end
 
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("LangSettings", { clear = true }),
-  callback = function(ev) if ft[ev.match] then ft[ev.match](ev) end end
+  callback = function(ev)
+    if vim.b.editorconfig and vim.b.editorconfig.enable_lsp == "false" then return end
+    if ft[ev.match] then ft[ev.match](ev) end
+  end
 })
 
--- ── SNIPPETS / TEMPLATES ─────────────────────────────────────────────────────
--- Handled by blink.cmp via JSON snippets in ~/.config/nvim/snippets/package.json

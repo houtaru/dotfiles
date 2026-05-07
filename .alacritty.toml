@@ -1,5 +1,5 @@
 [font]
-size = 15
+size = 14
 
 [font.normal]
 family = "JetBrainsMono Nerd Font"
@@ -7,8 +7,10 @@ style = "Regular"
 
 [window]
 option_as_alt = "Both"
-opacity = 0.85
+opacity = 0.8
+startup_mode = "Maximized"
+# decorations = "None"
 
 [general]
-live_config_reload = false
+live_config_reload = true
 
