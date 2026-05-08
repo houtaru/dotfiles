@@ -144,6 +144,7 @@ o.number        = true
 o.autoindent    = true
 o.backspace     = "indent,eol,start"
 o.history       = 1000
+o.fileencodings = "utf-8"
 
 o.hlsearch      = true; o.incsearch = true; o.ignorecase = true; o.smartcase = true
 o.mouse         = "a"
@@ -212,7 +213,7 @@ vim.diagnostic.config({
 -- ── COLORSCHEME ───────────────────────────────────────────────────────────────
 vim.cmd.colorscheme("codedark")
 local function apply_transparency()
-  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded" }
+  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded","LspInlayHint" }
   for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
 end
 apply_transparency()
