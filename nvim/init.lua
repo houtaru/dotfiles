@@ -354,25 +354,6 @@ local function qf_in_tab()
   return false
 end
 
-vim.keymap.set("n", "<leader>q", function() vim.cmd(qf_open() and "cclose" or "copen") end,
-  { silent=true, desc="KEYMAPS: toggle quickfix" })
-vim.keymap.set("n", "<leader>n", function() vim.cmd(qf_in_tab() and "cnext" or "bnext") end,
-  { desc="KEYMAPS: next qf item / buffer" })
-vim.keymap.set("n", "<leader>b", function() vim.cmd(qf_in_tab() and "cprev" or "bprev") end,
-  { desc="KEYMAPS: prev qf item / buffer" })
-
-vim.keymap.set("n", "g]", function()
-  local w = vim.fn.expand("<cword>")
-  local t = vim.fn.taglist("^"..w.."$")
-  if #t == 0 then return vim.notify("No tags: "..w, 2) end
-  local items = {}
-  for _, v in ipairs(t) do
-    table.insert(items, { filename=v.filename, text=v.name, lnum=tonumber(v.cmd), pattern=not tonumber(v.cmd) and v.cmd:sub(2,-2) or nil })
-  end
-  vim.fn.setqflist({}, "r", { title="Tags: "..w, items=items })
-  vim.cmd("copen")
-end, { desc="Search tags to quickfix" })
-
 local function rg_qf(pattern, extra_flags, title)
   if not pattern or pattern == "" then
     vim.notify("Rg: missing pattern", vim.log.levels.WARN); return
@@ -393,6 +374,29 @@ local function rg_qf(pattern, extra_flags, title)
     end)
   end)
 end
+
+vim.keymap.set("n", "<leader>q", function() vim.cmd(qf_open() and "cclose" or "copen") end,
+  { silent=true, desc="KEYMAPS: toggle quickfix" })
+vim.keymap.set("n", "<leader>n", function() vim.cmd(qf_in_tab() and "cnext" or "bnext") end,
+  { desc="KEYMAPS: next qf item / buffer" })
+vim.keymap.set("n", "<leader>b", function() vim.cmd(qf_in_tab() and "cprev" or "bprev") end,
+  { desc="KEYMAPS: prev qf item / buffer" })
+
+vim.keymap.set("n", "g]", function()
+  local w = vim.fn.expand("<cword>")
+  local t = vim.fn.taglist("^"..w.."$")
+  if #t == 0 then return vim.notify("No tags: "..w, 2) end
+  local items = {}
+  for _, v in ipairs(t) do
+    table.insert(items, { filename=v.filename, text=v.name, lnum=tonumber(v.cmd), pattern=not tonumber(v.cmd) and v.cmd:sub(2,-2) or nil })
+  end
+  vim.fn.setqflist({}, "r", { title="Tags: "..w, items=items })
+  vim.cmd("copen")
+end, { desc="Search tags to quickfix" })
+
+vim.keymap.set("n", "gw", function()
+  rg_qf(vim.fn.expand("<cword>"))
+end, { desc = "Search word under cursor to quickfix" })
 
 vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, { nargs="+" })
 vim.cmd("cabbrev rg Rg")
@@ -450,6 +454,9 @@ local function set_rg(ft, flags)
   vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
     rg_qf(opts.args, flags, (":Rg(%s) %s"):format(ft, opts.args))
   end, { nargs = "+", desc = "Rg scoped to " .. ft })
+  vim.keymap.set("n", "gw", function()
+    rg_qf(vim.fn.expand("<cword>"), flags, (":Rg(%s) %s"):format(ft, vim.fn.expand("<cword>")))
+  end, { buffer = 0, desc = "Search word under cursor to quickfix (scoped)" })
 end
 
 local ft = {}
