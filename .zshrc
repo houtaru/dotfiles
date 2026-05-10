@@ -111,34 +111,6 @@ autoload -Uz compinit && compinit -i
 # Replay completions to apply styles (Zinit specific)
 zinit cdreplay -q
 
-# ── PROMPT ───────────────────────────────────────────────────────────────────
-autoload -Uz vcs_info
-precmd_vcs_info() { vcs_info }
-precmd_functions+=( precmd_vcs_info )
-
-zstyle ':vcs_info:*' check-for-changes true
-zstyle ':vcs_info:*' unstagedstr '!'
-zstyle ':vcs_info:*' stagedstr '+'
-zstyle ':vcs_info:git:*' formats '%F{green}%b%f %m'
-zstyle ':vcs_info:git*+set-message:*' hooks git-status
-
-+vi-git-status() {
-    if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) != 'true' ]]; then
-        return 1
-    fi
-    local staged=$(git diff --cached --numstat | wc -l | tr -d ' ')
-    local unstaged=$(git diff --numstat | wc -l | tr -d ' ')
-    local untracked=$(git ls-files --others --exclude-standard | wc -l | tr -d ' ')
-    local res=""
-    [ $staged -gt 0 ]   && res+="%F{green}+${staged}%f"
-    [ $unstaged -gt 0 ] && res+="%F{yellow}~${unstaged}%f"
-    [ $untracked -gt 0 ] && res+="%F{blue}?${untracked}%f"
-    hook_com[misc]=$res
-}
-
-local exit_code_prompt='%(?..%B%F{red}%?%f%b )'
-PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
-
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
 if $IS_MAC; then
     bindkey '^[[1;3C' forward-word
@@ -331,6 +303,38 @@ wlog() {
         | fzf -d / --nth -1 --reverse -0 --cycle --height 100%)
     [[ -n "$dir" ]] && ${EDITOR:-vim} "$dir"
 }
+
+# ── PROMPT & VCS ─────────────────────────────────────────────────────────────
+autoload -Uz vcs_info
+
+# Dynamic toggle: disable expensive status checks for large repos (git config zsh.vcs-info false)
+# This keeps the branch name visible but skips the slow +vi-git-status hook.
+zstyle -e ':vcs_info:*' check-for-changes '[[ "$(git config --get zsh.vcs-info 2>/dev/null)" == "false" ]] && reply=(false) || reply=(true)'
+zstyle -e ':vcs_info:git*+set-message:*' hooks '[[ "$(git config --get zsh.vcs-info 2>/dev/null)" == "false" ]] && reply=() || reply=(git-status)'
+
+zstyle ':vcs_info:*' unstagedstr '!'
+zstyle ':vcs_info:*' stagedstr '+'
+zstyle ':vcs_info:git:*' formats '%F{green}%b%f %m'
+
+precmd_vcs_info() { vcs_info }
+precmd_functions+=( precmd_vcs_info )
+
++vi-git-status() {
+    if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) != 'true' ]]; then
+        return 1
+    fi
+    local staged=$(git diff --cached --numstat | wc -l | tr -d ' ')
+    local unstaged=$(git diff --numstat | wc -l | tr -d ' ')
+    local untracked=$(git ls-files --others --exclude-standard | wc -l | tr -d ' ')
+    local res=""
+    [ $staged -gt 0 ]   && res+="%F{green}+${staged}%f"
+    [ $unstaged -gt 0 ] && res+="%F{yellow}~${unstaged}%f"
+    [ $untracked -gt 0 ] && res+="%F{blue}?${untracked}%f"
+    hook_com[misc]=$res
+}
+
+local exit_code_prompt='%(?..%B%F{red}%?%f%b )'
+PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 
 # ── EXTRA / LOCAL OVERRIDES ──────────────────────────────────────────────────
 # Source ~/.extra for machine-local config that shouldn't be committed
