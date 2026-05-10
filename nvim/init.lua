@@ -50,10 +50,19 @@ require("lazy").setup({
     event  = "BufReadPost",
     config = function()
       require("nvim-treesitter").setup {
-        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus" },
+        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus", "markdown", "markdown_inline", "latex" },
         auto_install = false,
       }
     end,
+  },
+
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown" },
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+    opts = {
+      latex = { enabled = true }, -- Performance note: Unicode-based, no external daemon
+    },
   },
 
   { "nvim-treesitter/nvim-treesitter-textobjects",
@@ -398,6 +407,16 @@ vim.keymap.set("n", "gw", function()
   rg_qf(vim.fn.expand("<cword>"))
 end, { desc = "Search word under cursor to quickfix" })
 
+vim.keymap.set("v", "gw", function()
+  local lines = vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = vim.fn.mode() })
+  if #lines == 0 then return end
+  local pattern = table.concat(lines, "\n")
+  local flags = { "-F" }
+  if #lines > 1 then table.insert(flags, "-U") end
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+  rg_qf(pattern, flags, "Visual Search")
+end, { desc = "Search selection to quickfix" })
+
 vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, { nargs="+" })
 vim.cmd("cabbrev rg Rg")
 
@@ -457,6 +476,16 @@ local function set_rg(ft, flags)
   vim.keymap.set("n", "gw", function()
     rg_qf(vim.fn.expand("<cword>"), flags, (":Rg(%s) %s"):format(ft, vim.fn.expand("<cword>")))
   end, { buffer = 0, desc = "Search word under cursor to quickfix (scoped)" })
+  vim.keymap.set("v", "gw", function()
+    local sel = vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos("."), { type = vim.fn.mode() })
+    if #sel == 0 then return end
+    local pattern = table.concat(sel, "\n")
+    local f = vim.deepcopy(flags or {})
+    table.insert(f, "-F")
+    if #sel > 1 then table.insert(f, "-U") end
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    rg_qf(pattern, f, (":Rg(%s) Visual"):format(ft))
+  end, { buffer = 0, desc = "Search selection to quickfix (scoped)" })
 end
 
 local ft = {}
