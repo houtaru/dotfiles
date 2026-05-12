@@ -112,13 +112,23 @@ autoload -Uz compinit && compinit -i
 zinit cdreplay -q
 
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
+bindkey -e # Enforce emacs mode to prevent Vi-mode deletion behavior
+
 if $IS_MAC; then
+    # macOS: Alt + Arrows
     bindkey '^[[1;3C' forward-word
     bindkey '^[[1;3D' backward-word
     bindkey '^[^M'    autosuggest-accept
 else
-    bindkey '^ '   forward-word
-    bindkey '^[^M' autosuggest-accept
+    # Linux (Ubuntu): Alt + Arrows
+    bindkey '^[[1;3C' forward-word
+    bindkey '^[[1;3D' backward-word
+    # Linux (Ubuntu): Ctrl + Arrows
+    bindkey '^[[1;5C' forward-word
+    bindkey '^[[1;5D' backward-word
+
+    bindkey '^ '      forward-word
+    bindkey '^[^M'    autosuggest-accept
 fi
 
 # ── CLIPBOARD HELPER ─────────────────────────────────────────────────────────
