@@ -1,3 +1,5 @@
+# zmodload zsh/zprof
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ~/.zshrc  —  unified shell config (zsh, macOS + Linux)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -6,10 +8,12 @@
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)" && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" 2>/dev/null
 source "${ZINIT_HOME}/zinit.zsh"
-zinit light zsh-users/zsh-autosuggestions
-zinit light zsh-users/zsh-syntax-highlighting
-zinit snippet OMZP::git
-zinit snippet OMZP::history
+
+# Turbo mode for plugins (defer loading)
+zinit ice wait"0" lucid; zinit light zsh-users/zsh-autosuggestions
+zinit ice wait"0" lucid; zinit light zsh-users/zsh-syntax-highlighting
+zinit ice wait"0" lucid; zinit snippet OMZP::git
+zinit ice wait"0" lucid; zinit snippet OMZP::history
 
 # ── OS DETECTION ─────────────────────────────────────────────────────────────
 IS_MAC=false
@@ -33,6 +37,7 @@ setopt HIST_IGNORE_ALL_DUPS      # Delete old duplicate event if new one is reco
 setopt HIST_EXPIRE_DUPS_FIRST    # When file is full, delete duplicates first
 setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks before recording
 setopt HIST_VERIFY               # Don't execute immediately upon history expansion
+setopt EXTENDED_GLOB             # Needed for advanced globbing (like compinit check)
 
 # Completion & Navigation
 setopt AUTO_CD                   # cd by typing directory name
@@ -106,10 +111,29 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 # '' allows exact match first, then tries case-insensitive, then partial
 zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=* l:|=*'
 
-autoload -Uz compinit && compinit -i
+# Fast compinit (cache check)
+autoload -Uz compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.m-1) ]]; then
+  compinit -C
+else
+  compinit -i
+fi
 
 # Replay completions to apply styles (Zinit specific)
 zinit cdreplay -q
+
+# ── DOT EXPANSION ───────────────────────────────────────────────────────────
+# .. -> .. | ... -> ../.. | .... -> ../../..
+rationalise-dot() {
+  if [[ $LBUFFER = *.. ]]; then
+    LBUFFER+=/..
+  else
+    LBUFFER+=.
+  fi
+}
+zle -N rationalise-dot
+bindkey "." rationalise-dot
+bindkey -M isearch "." self-insert # Don't expand during incremental search
 
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
 bindkey -e # Enforce emacs mode to prevent Vi-mode deletion behavior
@@ -349,3 +373,4 @@ PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 # ── EXTRA / LOCAL OVERRIDES ──────────────────────────────────────────────────
 # Source ~/.extra for machine-local config that shouldn't be committed
 [ -r "$HOME/.extra" ] && [ -f "$HOME/.extra" ] && source "$HOME/.extra"
+# zprof
