@@ -8,11 +8,8 @@
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)" && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" 2>/dev/null
 source "${ZINIT_HOME}/zinit.zsh"
-
-# Turbo mode for plugins (defer loading)
-zinit ice wait"0" lucid; zinit light zsh-users/zsh-autosuggestions
-zinit ice wait"0" lucid; zinit light zsh-users/zsh-syntax-highlighting
-zinit ice wait"0" lucid; zinit snippet OMZP::git
+zinit light zsh-users/zsh-autosuggestions
+zinit light zsh-users/zsh-syntax-highlighting
 zinit ice wait"0" lucid; zinit snippet OMZP::history
 
 # ── OS DETECTION ─────────────────────────────────────────────────────────────
@@ -74,12 +71,10 @@ $IS_MAC && export PATH="/opt/homebrew/bin:$PATH"
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 
 # nvm / node — prefer nvm-managed node
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ]            && source "$NVM_DIR/nvm.sh"
+# export NVM_DIR="$HOME/.nvm"
+ #[ -s "$NVM_DIR/nvm.sh" ]            && source "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ]   && source "$NVM_DIR/bash_completion"
 # fallback pinned node path (only used when nvm isn't active)
-[ -d "$HOME/.nvm/versions/node/v18.12.1/bin" ] && \
-    export PATH="$HOME/.nvm/versions/node/v18.12.1/bin:$PATH"
 
 # golang
 if $IS_MAC && command -v brew &>/dev/null; then
@@ -88,7 +83,6 @@ fi
 
 # rvm
 export PATH="$PATH:$HOME/.rvm/bin"
-[[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
 
 # cargo/rust
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
@@ -122,19 +116,6 @@ fi
 # Replay completions to apply styles (Zinit specific)
 zinit cdreplay -q
 
-# ── DOT EXPANSION ───────────────────────────────────────────────────────────
-# .. -> .. | ... -> ../.. | .... -> ../../..
-rationalise-dot() {
-  if [[ $LBUFFER = *.. ]]; then
-    LBUFFER+=/..
-  else
-    LBUFFER+=.
-  fi
-}
-zle -N rationalise-dot
-bindkey "." rationalise-dot
-bindkey -M isearch "." self-insert # Don't expand during incremental search
-
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
 bindkey -e # Enforce emacs mode to prevent Vi-mode deletion behavior
 
@@ -155,6 +136,19 @@ else
     bindkey '^[^M'    autosuggest-accept
 fi
 
+# ── DOT EXPANSION ───────────────────────────────────────────────────────────
+# .. -> .. | ... -> ../.. | .... -> ../../..
+rationalise-dot() {
+  if [[ $LBUFFER = *.. ]]; then
+    LBUFFER+=/..
+  else
+    LBUFFER+=.
+  fi
+}
+zle -N rationalise-dot
+bindkey "." rationalise-dot
+bindkey -M isearch "." self-insert # Don't expand during incremental search
+
 # ── CLIPBOARD HELPER ─────────────────────────────────────────────────────────
 # Unified `copy` command: pbcopy on macOS, xclip on Linux
 if $IS_MAC; then
@@ -167,6 +161,7 @@ else
 fi
 
 # ── ALIASES ──────────────────────────────────────────────────────────────────
+alias vi="nvim"
 alias nv="nvim"
 alias cp="cp -v"
 alias mv="mv -v"
@@ -195,11 +190,8 @@ if $IS_MAC; then
     alias ']'='open'
 else
     alias ']'='xdg-open'
-    alias drag="xdg-open"
+    alias drag="dragon -a -x"
 fi
-
-# git
-alias gs="git status"
 
 # tmux
 alias tm="tmux -2"
@@ -214,27 +206,47 @@ if $IS_LINUX; then
     alias audio="pulseaudio -k && sudo alsa force-reload"
 fi
 
-# git workflow shortcut
-function update_release {
-    local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    echo "current git branch: $CURRENT_BRANCH"
-    git stash
-    git checkout master
-    git pull origin master
-    git checkout release
-    git pull origin release
-    git merge master
-    git push origin release
-    git checkout "$CURRENT_BRANCH"
-    git stash pop
-}
-alias release=update_release
+# ── GIT ─────────────────────────────────────────────────────────────────
+alias gs="git status"
+alias gss='git status --short'
 
-# kill port 80
-kill80() {
-    sudo lsof -i :80 | grep 'apache2' | awk '{ print $2 }' | xargs sudo kill -9
-    sudo lsof -i :80 | grep 'nginx'   | awk '{ print $2 }' | xargs sudo kill -9
+alias gf='git fetch'
+alias gd='git diff'
+
+alias glo='git log --oneline --decorate'
+alias glg='git log --stat'
+
+alias gm='git merge'
+
+alias gco='git checkout'
+alias gcor='git checkout --recurse-submodules'
+alias gcb='git checkout -b' # create branch, FAILS if exists
+alias gcB='git checkout -B' # create branch, RESET if exists
+
+alias gp='git push'
+function ggp() {
+  local remote=${1:-origin}
+  git push ${remote} $(git branch --show-current)
 }
+compdef _git ggp=git-push
+
+function gpsup() {
+  local remote=${1:-origin}
+  git push --set-upstream ${remote} $(git branch --show-current)
+}
+compdef _git gpsup=git-push
+
+alias gl='git pull'
+function ggl() {
+  if [[ $# != 0 ]] && [[ $# != 1 ]]; then
+    git pull origin "${*}"
+  else
+    local b
+    [[ $# == 0 ]] && b="$(git_current_branch)"
+    git pull origin "${b:-$1}"
+  fi
+}
+compdef _git ggl=git-pull
 
 # ── FUNCTIONS ─────────────────────────────────────────────────────────────────
 
@@ -259,6 +271,32 @@ gjd() {
         | fzf -d / --nth -1 --reverse -0 --cycle --height 100% \
         | cut -d' ' -f1)
     [[ -n "$dir" ]] && cd "$dir"
+}
+
+extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2)   tar xavjf "$1"     ;;
+            *.tar.gz)    tar xavzf "$1"     ;;
+            *.bz2)       bunzip2 "$1"     ;;
+            *.rar)       unrar x "$1"     ;;
+            *.gz)        gunzip "$1"      ;;
+            *.tar)       tar xf "$1"      ;;
+            *.tbz2)      tar xjf "$1"     ;;
+            *.tgz)       tar xzf "$1"     ;;
+            *.zip)       unzip "$1"       ;;
+            *.Z)         uncompress "$1"  ;;
+            *.7z)        7z x "$1"        ;;
+            *)           echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+function mkcd() {
+  dir="$*";
+  mkdir -p "$dir" && cd "$dir";
 }
 
 # ── DIRECTORY BOOKMARK STACK ─────────────────────────────────────────────────
@@ -372,5 +410,6 @@ PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 
 # ── EXTRA / LOCAL OVERRIDES ──────────────────────────────────────────────────
 # Source ~/.extra for machine-local config that shouldn't be committed
+[ -r "$HOME/.exports" ] && [ -f "$HOME/.exports" ] && source "$HOME/.exports"
 [ -r "$HOME/.extra" ] && [ -f "$HOME/.extra" ] && source "$HOME/.extra"
 # zprof
