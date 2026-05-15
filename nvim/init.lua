@@ -98,16 +98,10 @@ require("lazy").setup({
 
   { "tpope/vim-fugitive",
     cmd = { "Git","Gedit","Gdiffsplit","Gread","Gwrite","GBrowse","G" },
-    config = function()
-      vim.api.nvim_create_autocmd("BufWinEnter", {
-        callback = function()
-          if vim.wo.diff and vim.fn.bufname("%"):match("^fugitive://") then
-            vim.keymap.set("n", "[d", "<cmd>diffget //2<CR>", { buffer=true, desc="diffget LOCAL" })
-            vim.keymap.set("n", "]d", "<cmd>diffget //3<CR>", { buffer=true, desc="diffget REMOTE" })
-          end
-        end
-      })
-    end
+    keys = {
+      { "<leader>gh", "<cmd>diffget //2<CR>", mode = { "n", "v" }, desc = "Fugitive: get hunk from LEFT (LOCAL/Target)" },
+      { "<leader>gl", "<cmd>diffget //3<CR>", mode = { "n", "v" }, desc = "Fugitive: get hunk from RIGHT (REMOTE/Merge)" },
+    },
   },
 
 
