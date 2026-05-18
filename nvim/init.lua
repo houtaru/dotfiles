@@ -39,7 +39,12 @@ require("lazy").setup({
         },
         menu = { border = "rounded" },
       },
-      sources  = { default = { "lsp", "path", "snippets", "buffer" } },
+      sources  = {
+        default = { "lsp", "path", "snippets", "buffer" },
+        per_filetype = {
+          markdown = { "lsp", "path", "snippets", "buffer", "obsidian", "obsidian_new", "obsidian_tags" },
+        },
+      },
       snippets = { preset = "default" },
       signature = { enabled = true },
     },
@@ -127,6 +132,34 @@ require("lazy").setup({
         },
       })
     end,
+  },
+
+  {
+    "obsidian-nvim/obsidian.nvim",
+    version = "*",
+    lazy = true,
+    ft = "markdown",
+    cmd = "Obsidian",
+    dependencies = { "saghen/blink.cmp" },
+    opts = {
+      workspaces = {
+        {
+          name = "personal",
+          path = "~/code/repo/obsidian-vault",
+        },
+      },
+      completion = {
+        blink = true,
+        min_chars = 2,
+      },
+      daily_notes = {
+        folder = "dailies",
+        date_format = "%Y-%m-%d",
+        template = nil,
+      },
+      legacy_commands = false,
+      ui = { enable = false }, -- Let render-markdown.nvim handle visuals
+    },
   },
 
   { "ibhagwan/fzf-lua", lazy=true,
@@ -326,25 +359,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.diagnostic.enable(not enabled, { bufnr=buf })
     end, "Toggle diagnostics (buffer)")
 
-    m("n", "<leader>dq", function() vim.diagnostic.setqflist({ open = true }) end, "Diagnostics to quickfix (buffer)")
-    m("n", "<leader>dQ", function() vim.diagnostic.setqflist({ open = true, workspace = true }) end, "Diagnostics to quickfix (workspace)")
+    m("n", "<leader>dq", function() vim.diagnostic.setqflist({ open = true, bufnr = 0 }) end, "Diagnostics to quickfix (current file)")
+    m("n", "<leader>dQ", function() vim.diagnostic.setqflist({ open = true }) end, "Diagnostics to quickfix (buffer)")
 
     -- Document highlight on CursorHold (replaces coc highlight)
     -- Scoped augroup per buffer avoids accumulation on many open files.
-    local augrp = vim.api.nvim_create_augroup("LspDocHL_"..buf, { clear=true })
-    vim.api.nvim_create_autocmd("CursorHold", {
-      buffer   = buf,
-      group    = augrp,
-      callback = vim.lsp.buf.document_highlight,
+    if client and client.server_capabilities.documentHighlightProvider then
+      local augrp = vim.api.nvim_create_augroup("LspDocHL_"..buf, { clear=true })
+      vim.api.nvim_create_autocmd("CursorHold", {
+        buffer   = buf,
+        group    = augrp,
+        callback = vim.lsp.buf.document_highlight,
+      })
+      vim.api.nvim_create_autocmd({"CursorMoved","InsertEnter"}, {
+        buffer   = buf,
+        group    = augrp,
+        callback = vim.lsp.buf.clear_references,
+      })
+    end
+    end,
     })
-    vim.api.nvim_create_autocmd({"CursorMoved","InsertEnter"}, {
-      buffer   = buf,
-      group    = augrp,
-      callback = vim.lsp.buf.clear_references,
-    })
-  end,
-})
-
 -- ── QUICKFIX & SEARCH ─────────────────────────────────────────────────────────
 local function qf_open()
   for _, w in ipairs(vim.fn.getwininfo()) do if w.quickfix == 1 then return true end end
@@ -415,10 +449,14 @@ vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, 
 vim.cmd("cabbrev rg Rg")
 
 -- ── KEYMAPS ───────────────────────────────────────────────────────────────────
+vim.keymap.set({"i", "v"}, "jk", "<Esc>", { desc = 'Enter normal mode'})
 vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="Yank path" })
 vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { silent=true })
+
 vim.keymap.set("n", "<leader>v", "<cmd>vsplit<CR>")
 vim.keymap.set("n", "<leader>s", "<cmd>split<CR>")
+vim.keymap.set('n', '<leader>=', '<C-w>=', { desc = 'Make windows equal size' })
+
 vim.keymap.set("n", "<leader>gf", function()
   local params = { textDocument = vim.lsp.util.make_text_document_params() }
   vim.lsp.buf_request(0, "textDocument/documentSymbol", params, function(err, result)
