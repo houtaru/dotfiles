@@ -8,9 +8,11 @@
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)" && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" 2>/dev/null
 source "${ZINIT_HOME}/zinit.zsh"
+
+zinit ice wait"0" lucid
 zinit light zsh-users/zsh-autosuggestions
 zinit light zsh-users/zsh-syntax-highlighting
-zinit ice wait"0" lucid; zinit snippet OMZP::history
+zinit snippet OMZP::history
 
 # ── OS DETECTION ─────────────────────────────────────────────────────────────
 IS_MAC=false
@@ -69,6 +71,9 @@ $IS_MAC && export PATH="/opt/homebrew/bin:$PATH"
 
 # yarn
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+if $IS_MAC && [ -d /Library/TeX/texbin ]; then
+    PATH="/Library/TeX/texbin:$PATH"
+fi
 
 # nvm / node — prefer nvm-managed node
 # export NVM_DIR="$HOME/.nvm"
@@ -223,10 +228,22 @@ alias gcor='git checkout --recurse-submodules'
 alias gcb='git checkout -b' # create branch, FAILS if exists
 alias gcB='git checkout -B' # create branch, RESET if exists
 
-alias gp='git push'
-function ggp() {
+function gbsu() {
+  local current_branch=$(git branch --show-current)
+  git branch --set-upstream-to=${1:-origin} ${2:-$current_branch}
+}
+compdef _git gbsu=git-branch
+
+function gp() {
   local remote=${1:-origin}
   git push ${remote} $(git branch --show-current)
+}
+compdef _git gp=git-push
+
+function ggp() {
+  local remote=${1:-origin}
+  local current_branch=$(git branch --show-current)
+  git push ${remote} ${2:-$current_branch}
 }
 compdef _git ggp=git-push
 
@@ -236,15 +253,15 @@ function gpsup() {
 }
 compdef _git gpsup=git-push
 
-alias gl='git pull'
+function gl() {
+  local remote=${1:-origin}
+  git pull ${1:-origin} $(git branch --show-current)
+}
+compdef _git gl=git-pull
+
 function ggl() {
-  if [[ $# != 0 ]] && [[ $# != 1 ]]; then
-    git pull origin "${*}"
-  else
-    local b
-    [[ $# == 0 ]] && b="$(git_current_branch)"
-    git pull origin "${b:-$1}"
-  fi
+  local current_branch=$(git branch --show-current)
+  git pull ${1:-origin} ${2:-$current_branch}
 }
 compdef _git ggl=git-pull
 
