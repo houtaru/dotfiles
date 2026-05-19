@@ -24,10 +24,12 @@ require("lazy").setup({
       keymap = {
         preset = "none",
         ["<C-Space>"] = { "show", "fallback" },
-        ["<Tab>"]     = { "select_next", "snippet_forward", "fallback" },
-        ["<S-Tab>"]   = { "select_prev", "snippet_backward", "fallback" },
         ["<CR>"]      = { "accept", "fallback" },
         ["<C-e>"]     = { "cancel" },
+        ["<Tab>"]     = { "snippet_forward", "fallback" },
+        ["<S-Tab>"]   = { "snippet_backward", "fallback" },
+        ["<C-n>"]     = { "select_next", "fallback_to_mappings" },
+        ["<C-p>"]     = { "select_prev", "fallback_to_mappings" },
         ["<C-f>"]     = { "scroll_documentation_down", "fallback" },
         ["<C-b>"]     = { "scroll_documentation_up",   "fallback" },
       },
@@ -36,6 +38,9 @@ require("lazy").setup({
           auto_show          = true,
           auto_show_delay_ms = 200,
           window             = { border = "rounded" },
+        },
+        trigger = {
+          show_in_snippet = false
         },
         menu = { border = "rounded" },
       },
@@ -67,6 +72,8 @@ require("lazy").setup({
     dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
     opts = {
       latex = { enabled = true }, -- Performance note: Unicode-based, no external daemon
+      debounce = 100,
+      render_modes = { "n", "c" },  -- don't render in insert mode
     },
   },
 
@@ -449,7 +456,6 @@ vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, 
 vim.cmd("cabbrev rg Rg")
 
 -- ── KEYMAPS ───────────────────────────────────────────────────────────────────
-vim.keymap.set({"i", "v"}, "jk", "<Esc>", { desc = 'Enter normal mode'})
 vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="Yank path" })
 vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { silent=true })
 
