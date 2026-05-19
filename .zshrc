@@ -9,8 +9,8 @@ ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)" && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME" 2>/dev/null
 source "${ZINIT_HOME}/zinit.zsh"
 
-zinit ice wait"0" lucid
 zinit light zsh-users/zsh-autosuggestions
+zinit ice wait"0" lucid
 zinit light zsh-users/zsh-syntax-highlighting
 zinit snippet OMZP::history
 
@@ -157,14 +157,13 @@ bindkey -M isearch "." self-insert # Don't expand during incremental search
 # ── CLIPBOARD HELPER ─────────────────────────────────────────────────────────
 # Unified `copy` command: pbcopy on macOS, xclip on Linux
 if $IS_MAC; then
-    alias copy="pbcopy"
+    copy() { cat -- "${@:--}" | perl -pe 'chomp if eof' | pbcopy }
     alias paste="pbpaste"
 else
-    alias copy="xclip -selection clipboard"
+    copy() { cat -- "${@:--}" | perl -pe 'chomp if eof' | xclip -selection clipboard }
     alias paste="xclip -selection clipboard -o"
     alias clear-clipboard="xclip -sel clipboard < /dev/null"
 fi
-
 # ── ALIASES ──────────────────────────────────────────────────────────────────
 alias vi="nvim"
 alias nv="nvim"
