@@ -89,6 +89,8 @@ fi
 # rvm
 export PATH="$PATH:$HOME/.rvm/bin"
 
+export PATH="$HOME/.local/bin:$PATH"
+
 # cargo/rust
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
@@ -200,6 +202,7 @@ fi
 # tmux
 alias tm="tmux -2"
 alias tmkill="tmux kill-session"
+alias tmatt="tmux attach"
 
 # dotfiles manager (bare repo trick)
 alias dotfiles="/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
@@ -429,3 +432,4 @@ PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 [ -r "$HOME/.exports" ] && [ -f "$HOME/.exports" ] && source "$HOME/.exports"
 [ -r "$HOME/.extra" ] && [ -f "$HOME/.extra" ] && source "$HOME/.extra"
 # zprof
+
