@@ -12,7 +12,7 @@ source "${ZINIT_HOME}/zinit.zsh"
 zinit light zsh-users/zsh-autosuggestions
 zinit ice wait"0" lucid
 zinit light zsh-users/zsh-syntax-highlighting
-zinit snippet OMZP::history
+
 
 # ── OS DETECTION ─────────────────────────────────────────────────────────────
 IS_MAC=false
@@ -37,6 +37,18 @@ setopt HIST_EXPIRE_DUPS_FIRST    # When file is full, delete duplicates first
 setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks before recording
 setopt HIST_VERIFY               # Don't execute immediately upon history expansion
 setopt EXTENDED_GLOB             # Needed for advanced globbing (like compinit check)
+
+# History wrapper & aliases (inlined OMZ history plugin)
+history() {
+  if [[ $# -eq 0 ]]; then
+    builtin fc -l 1
+  else
+    builtin fc -l "$@"
+  fi
+}
+alias h='history'
+alias hl='history | less'
+alias hs='history | grep'
 
 # Completion & Navigation
 setopt AUTO_CD                   # cd by typing directory name
@@ -89,8 +101,6 @@ fi
 # rvm
 export PATH="$PATH:$HOME/.rvm/bin"
 
-export PATH="$HOME/.local/bin:$PATH"
-
 # cargo/rust
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
@@ -125,6 +135,15 @@ zinit cdreplay -q
 
 # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
 bindkey -e # Enforce emacs mode to prevent Vi-mode deletion behavior
+
+# History search with prefix using Up/Down arrows
+autoload -U up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search  # Up Arrow (ANSI)
+bindkey '^[OA' up-line-or-beginning-search  # Up Arrow (Application mode)
+bindkey '^[[B' down-line-or-beginning-search # Down Arrow (ANSI)
+bindkey '^[OB' down-line-or-beginning-search # Down Arrow (Application mode)
 
 if $IS_MAC; then
     # macOS: Alt + Arrows
@@ -427,9 +446,20 @@ precmd_functions+=( precmd_vcs_info )
 local exit_code_prompt='%(?..%B%F{red}%?%f%b )'
 PROMPT="${exit_code_prompt}%* %F{blue}%B%~%b%f \${vcs_info_msg_0_} $ "
 
+git-toggle-status() {
+    if [[ "$(git config --get zsh.vcs-info 2>/dev/null)" == "false" ]]; then
+        git config zsh.vcs-info true
+    else
+        git config zsh.vcs-info false
+    fi
+}
+
 # ── EXTRA / LOCAL OVERRIDES ──────────────────────────────────────────────────
 # Source ~/.extra for machine-local config that shouldn't be committed
 [ -r "$HOME/.exports" ] && [ -f "$HOME/.exports" ] && source "$HOME/.exports"
 [ -r "$HOME/.extra" ] && [ -f "$HOME/.extra" ] && source "$HOME/.extra"
 # zprof
 
+
+# Added by Antigravity CLI installer
+export PATH="/Users/ijika/.local/bin:$PATH"
