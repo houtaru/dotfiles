@@ -19,6 +19,13 @@ IS_MAC=false
 IS_LINUX=false
 [[ $(uname -s) == "Darwin" ]] && IS_MAC=true || IS_LINUX=true
 
+# ── CONTAINER COMMAND ────────────────────────────────────────────────────────
+if $IS_MAC; then
+  export CONTAINER_COMMAND="container"
+else
+  export CONTAINER_COMMAND="podman"
+fi
+
 # ── HISTORY & OPTIONS ────────────────────────────────────────────────────────
 export HISTFILE="$HOME/.zsh_history"
 export HISTSIZE=32768
