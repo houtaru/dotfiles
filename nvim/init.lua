@@ -471,7 +471,6 @@ vim.keymap.set("v", "gw", function()
 end, { desc = "Search selection to quickfix" })
 
 vim.api.nvim_create_user_command("Rg", function(opts) rg_qf(opts.args, {}) end, { nargs="+" })
-vim.cmd("cabbrev rg Rg")
 
 -- ── KEYMAPS ───────────────────────────────────────────────────────────────────
 vim.keymap.set("n", "<leader>yf", function() vim.fn.setreg("+", vim.fn.expand("%:p")) end, { desc="Yank path" })

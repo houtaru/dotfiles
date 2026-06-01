@@ -20,9 +20,8 @@ IS_LINUX=false
 [[ $(uname -s) == "Darwin" ]] && IS_MAC=true || IS_LINUX=true
 
 # ── CONTAINER COMMAND ────────────────────────────────────────────────────────
-# Used by Neovim to run LSP servers inside containers (see lsp_container.md)
 if $IS_MAC; then
-  export CONTAINER_COMMAND="docker"
+  export CONTAINER_COMMAND="container"
 else
   export CONTAINER_COMMAND="podman"
 fi
