@@ -530,6 +530,36 @@ ec_prop("enable_lsp",            "true")
 ec_prop("exclude_ignorefiles",   "true")
 ec_prop("exclude_hidden",        "true")
 ec_prop("exclude_files",         "")
+ec_prop("container_name",        "")
+
+-- ── CONTAINER LSP ─────────────────────────────────────────────────────────────
+local function lsp_cmd(server, cmd, bufnr)
+  local ec = vim.b[bufnr].editorconfig or {}
+  local name = ec.container_name
+  if not name or name == "" then return cmd end
+
+  local container_cmd = vim.env.CONTAINER_COMMAND
+  if not container_cmd or container_cmd == "" or vim.fn.executable(container_cmd) ~= 1 then
+    vim.notify(
+      ("[LSP] %q not found — %s runs locally"):format(container_cmd, server),
+      vim.log.levels.WARN
+    )
+    return cmd
+  end
+
+  local check = vim.system({ container_cmd, "inspect", "-f", "{{.State.Running}}", name }, { text = true }):wait()
+  if check.code ~= 0 or vim.trim(check.stdout or "") ~= "true" then
+    vim.notify(
+      ("[LSP] container %q not running — %s runs locally"):format(name, server),
+      vim.log.levels.WARN
+    )
+    return cmd
+  end
+
+  local wrapped = { container_cmd, "exec", "-i", name }
+  for _, arg in ipairs(cmd) do table.insert(wrapped, arg) end
+  return wrapped
+end
 
 -- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
 
@@ -552,32 +582,49 @@ local function set_rg(ft, flags)
   end, { buffer = 0, desc = "Search selection to quickfix (scoped)" })
 end
 
+local function enable_lsp(server, bufnr)
+  local cfg = vim.lsp.config[server] or {}
+  local base_cmd = cfg.cmd
+  if not base_cmd then
+    vim.lsp.enable(server)
+    return
+  end
+  local cmd = lsp_cmd(server, base_cmd, bufnr)
+  if not cmd then return end
+  local override = { cmd = cmd }
+  if cmd ~= base_cmd then
+    override.before_init = function(params) params.processId = vim.NIL end
+  end
+  vim.lsp.config(server, override)
+  vim.lsp.enable(server)
+end
+
 local ft = {}
 
-ft.c = function()
-  set_rg("c/cpp", { "--type", "c", "--type", "cpp", "-g", "!thrift", "-g", "!thriftzg" })
-  vim.lsp.enable("clangd")
+ft.c = function(ev)
+  set_rg("c/cpp", { "--type", "c", "--type", "cpp"})
+  enable_lsp("clangd", ev.buf)
 end
 ft.cpp = ft.c
 
 ft.java = function()
-  set_rg("java", {"--type", "java", "-g", "!thrift", "-g", "!thriftzg"})
+  set_rg("java", {"--type", "java"})
 end
 
-ft.rust = function()
-  vim.lsp.enable("rust-analyzer")
+ft.rust = function(ev)
+  enable_lsp("rust_analyzer", ev.buf)
 end
 
-ft.go = function()
-  vim.lsp.enable("gopls")
+ft.go = function(ev)
+  enable_lsp("gopls", ev.buf)
 end
 
-ft.python = function()
-  vim.lsp.enable("pyright")
+ft.python = function(ev)
+  enable_lsp("pyright", ev.buf)
 end
 
-ft.lua = function()
-  vim.lsp.enable("lua_ls")
+ft.lua = function(ev)
+  enable_lsp("lua_ls", ev.buf)
 end
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -591,4 +638,3 @@ vim.api.nvim_create_autocmd("FileType", {
     end)
   end
 })
-
