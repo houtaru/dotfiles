@@ -403,6 +403,24 @@ local function rg_qf(pattern, extra_flags, title)
     vim.notify("Rg: missing pattern", vim.log.levels.WARN); return
   end
   local args = { "rg","--column","--line-number","--no-heading","--smart-case" }
+
+  local ec = vim.b.editorconfig or {}
+  if ec.exclude_ignorefiles == "false" then
+    table.insert(args, "--no-ignore")
+  end
+  if ec.exclude_hidden == "false" then
+    table.insert(args, "--hidden")
+  end
+  if ec.exclude_files and ec.exclude_files ~= "" then
+    for pat in ec.exclude_files:gmatch("[^,]+") do
+      pat = vim.trim(pat)
+      if pat ~= "" then
+        table.insert(args, "-g")
+        table.insert(args, "!" .. pat)
+      end
+    end
+  end
+
   for _, f in ipairs(extra_flags or {}) do table.insert(args, f) end
   table.insert(args, "--"); table.insert(args, pattern)
   vim.system(args, { text=true }, function(result)
@@ -501,11 +519,19 @@ vim.filetype.add({
   }
 })
 
--- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
-
-require("editorconfig").properties.enable_lsp = function(bufnr, val)
-  vim.b[bufnr].editorconfig = vim.tbl_extend("keep", vim.b[bufnr].editorconfig or {}, { enable_lsp = val })
+-- ── EDITORCONFIG ──────────────────────────────────────────────────────────────
+local function ec_prop(name, default)
+  require("editorconfig").properties[name] = function(bufnr, val)
+    vim.b[bufnr].editorconfig = vim.tbl_extend("keep", vim.b[bufnr].editorconfig or {}, { [name] = val or default })
+  end
 end
+
+ec_prop("enable_lsp",            "true")
+ec_prop("exclude_ignorefiles",   "true")
+ec_prop("exclude_hidden",        "true")
+ec_prop("exclude_files",         "")
+
+-- ── LANGUAGE SETTINGS ─────────────────────────────────────────────────────────
 
 local function set_rg(ft, flags)
   vim.api.nvim_buf_create_user_command(0, "Rg", function(opts)
