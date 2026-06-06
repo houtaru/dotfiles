@@ -537,7 +537,7 @@ local function sync_container_file(name, path)
   local container_cmd = vim.env.CONTAINER_COMMAND
   if not container_cmd or container_cmd == "" then return nil end
 
-  local cache_path = vim.fn.getcwd() .. "/.cache/container_nfm/" .. name .. path
+  local cache_path = vim.fn.getcwd() .. "/.cache/container/" .. name .. path
   if vim.fn.filereadable(cache_path) == 1 then return cache_path end
 
   local res = vim.system({ container_cmd, "exec", "-i", name, "cat", path }, { text = true }):wait()
