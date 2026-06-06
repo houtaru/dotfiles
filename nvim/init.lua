@@ -555,45 +555,19 @@ local function sync_container_file(name, path)
   return cache_path
 end
 
-local function fix_location(loc, container_name)
-  local uri = loc.uri or loc.targetUri
-  if not uri or not uri:match("^file://") then return end
+local orig_uri_to_fname = vim.uri_to_fname
+vim.uri_to_fname = function(uri)
+  local path = orig_uri_to_fname(uri)
+  if not uri:match("^file://") then return path end
 
-  local path = vim.uri_to_fname(uri)
-  if vim.fn.filereadable(path) == 1 then return end
+  local buf = vim.api.nvim_get_current_buf()
+  local name = vim.b[buf].editorconfig and vim.b[buf].editorconfig.container_name
+  if not name or name == "" then return path end
 
-  local cached_file = sync_container_file(container_name, path)
-  if not cached_file then return end
+  local cwd = vim.fn.getcwd()
+  if path == cwd or vim.startswith(path, cwd .. "/") then return path end
 
-  local new_uri = vim.uri_from_fname(cached_file)
-  if loc.uri then loc.uri = new_uri end
-  if loc.targetUri then loc.targetUri = new_uri end
-end
-
-local orig_locations_to_items = vim.lsp.util.locations_to_items
-vim.lsp.util.locations_to_items = function(locations, offset_encoding)
-  local name = vim.b.editorconfig and vim.b.editorconfig.container_name
-  if not name or name == "" then
-    return orig_locations_to_items(locations, offset_encoding)
-  end
-
-  for _, loc in ipairs(locations) do
-    fix_location(loc, name)
-  end
-  return orig_locations_to_items(locations, offset_encoding)
-end
-
-local orig_show_document = vim.lsp.util.show_document
-if orig_show_document then
-  vim.lsp.util.show_document = function(location, position_encoding, opts)
-    local name = vim.b.editorconfig and vim.b.editorconfig.container_name
-    if not name or name == "" then
-      return orig_show_document(location, position_encoding, opts)
-    end
-
-    fix_location(location, name)
-    return orig_show_document(location, position_encoding, opts)
-  end
+  return sync_container_file(name, path) or path
 end
 
 -- ── CONTAINER LSP ─────────────────────────────────────────────────────────────
