@@ -531,27 +531,51 @@ ec_prop("exclude_hidden",        "true")
 ec_prop("exclude_files",         "")
 ec_prop("container_name",        "")
 
+-- ── CONTAINER LSP FILE CACHE ─────────────────────────────────────────────────
+-- Intercepts LSP jumps to remote files and locally caches them in $PWD/.cache/
+local function sync_container_file(name, path)
+  local container_cmd = vim.env.CONTAINER_COMMAND
+  if not container_cmd or container_cmd == "" then return nil end
+
+  local cache_path = vim.fn.getcwd() .. "/.cache/container/" .. name .. path
+  if vim.fn.filereadable(cache_path) == 1 then return cache_path end
+
+  local res = vim.system({ container_cmd, "exec", "-i", name, "cat", path }, { text = true }):wait()
+  if res.code ~= 0 then return nil end
+
+  local lines = {}
+  if res.stdout and res.stdout ~= "" then
+    lines = vim.split(res.stdout, "\n")
+    if #lines > 0 and lines[#lines] == "" then
+      table.remove(lines)
+    end
+  end
+  vim.fn.mkdir(vim.fn.fnamemodify(cache_path, ":h"), "p")
+  vim.fn.writefile(lines, cache_path)
+  return cache_path
+end
+
+local orig_uri_to_fname = vim.uri_to_fname
+vim.uri_to_fname = function(uri)
+  local path = orig_uri_to_fname(uri)
+  if not uri:match("^file://") then return path end
+
+  local buf = vim.api.nvim_get_current_buf()
+  local name = vim.b[buf].editorconfig and vim.b[buf].editorconfig.container_name
+  if not name or name == "" then return path end
+
+  local cwd = vim.fn.getcwd()
+  if path == cwd or vim.startswith(path, cwd .. "/") then return path end
+
+  return sync_container_file(name, path) or path
+end
+
 -- ── CONTAINER LSP ─────────────────────────────────────────────────────────────
 local function lsp_cmd(server, cmd, bufnr)
-  local ec = vim.b[bufnr].editorconfig or {}
-  local name = ec.container_name
-  if not name or name == "" then return cmd end
-
+  local name = (vim.b[bufnr].editorconfig or {}).container_name
   local container_cmd = vim.env.CONTAINER_COMMAND
-  if not container_cmd or container_cmd == "" or vim.fn.executable(container_cmd) ~= 1 then
-    vim.notify(
-      ("[LSP] %q not found — %s runs locally"):format(container_cmd, server),
-      vim.log.levels.WARN
-    )
-    return cmd
-  end
 
-  local check = vim.system({ container_cmd, "inspect", "-f", "{{.State.Running}}", name }, { text = true }):wait()
-  if check.code ~= 0 or vim.trim(check.stdout or "") ~= "true" then
-    vim.notify(
-      ("[LSP] container %q not running — %s runs locally"):format(name, server),
-      vim.log.levels.WARN
-    )
+  if not name or name == "" or not container_cmd or container_cmd == "" then
     return cmd
   end
 
@@ -631,6 +655,7 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = function(ev)
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(ev.buf) then return end
+      if not vim.uri_from_bufnr(ev.buf):match("^file://") then return end
       local b = vim.b[ev.buf]
       if b.editorconfig and b.editorconfig.enable_lsp == "false" then return end
       if ft[ev.match] then ft[ev.match](ev) end
