@@ -8,6 +8,10 @@ end_of_line              = lf
 insert_final_newline     = true
 trim_trailing_whitespace = true
 enable_lsp               = true
+exclude_ignorefiles      = true
+exclude_hidden           = true
+#exclude_files           =
+#container_name          =
 
 # ── C / C++ ───────────────────────────────────────────────────────────────────
 [*.{c,h,cc,cpp,cxx,hh,hpp,hxx}]
