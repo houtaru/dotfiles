@@ -1,5 +1,8 @@
 name: Build Neovim AppImage
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Manual trigger only — go to Actions → Build Neovim AppImage → Run workflow
 on:
   workflow_dispatch:

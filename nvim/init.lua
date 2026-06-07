@@ -152,7 +152,7 @@ require("lazy").setup({
       workspaces = {
         {
           name = "personal",
-          path = "~/code/repo/obsidian-vault",
+          path = "$HOME/code/repo/obsidian-vault",
         },
       },
       completion = {
@@ -479,6 +479,7 @@ vim.keymap.set("n", "<C-N>", function() require("oil").toggle_float() end, { sil
 vim.keymap.set("n", "<leader>v", "<cmd>vsplit<CR>")
 vim.keymap.set("n", "<leader>s", "<cmd>split<CR>")
 vim.keymap.set('n', '<leader>=', '<C-w>=', { desc = 'Make windows equal size' })
+vim.keymap.set("n", "<leader>w", "<cmd>bw<CR>", { desc = "Close buffer" })
 
 vim.keymap.set("n", "<leader>gf", function()
   local params = { textDocument = vim.lsp.util.make_text_document_params() }
