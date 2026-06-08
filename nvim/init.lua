@@ -59,10 +59,7 @@ require("lazy").setup({
     branch = "main", build = ":TSUpdate",
     event  = "BufReadPost",
     config = function()
-      require("nvim-treesitter").setup {
-        ensure_installed = { "c", "cpp", "rust", "go", "bash", "python", "lua", "json", "yaml", "toml", "cmake", "tlaplus", "markdown", "markdown_inline", "latex" },
-        auto_install = false,
-      }
+      require("nvim-treesitter").setup {}
     end,
   },
 
@@ -256,8 +253,9 @@ vim.diagnostic.config({
 -- ── COLORSCHEME ───────────────────────────────────────────────────────────────
 vim.cmd.colorscheme("codedark")
 local function apply_transparency()
-  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded","LspInlayHint" }
+  local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded" }
   for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
+  vim.api.nvim_set_hl(0, "LspInlayHint", { fg="#808080", bg="none", ctermbg="none" })
 end
 apply_transparency()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_transparency })
@@ -651,12 +649,24 @@ ft.lua = function(ev)
   enable_lsp("lua_ls", ev.buf)
 end
 
+local ts_required_parsers = { c=true, cpp=true, rust=true, go=true, bash=true, python=true, lua=true, json=true, yaml=true, toml=true, cmake=true, markdown=true, markdown_inline=true, latex=true }
+
 vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("LangSettings", { clear = true }),
   callback = function(ev)
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(ev.buf) then return end
       if not vim.uri_from_bufnr(ev.buf):match("^file://") then return end
+
+      -- Native treesitter highlighting fallback
+      local ok = pcall(vim.treesitter.start, ev.buf)
+      if not ok then
+        local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
+        if ts_required_parsers[lang] then
+          vim.notify("Missing Tree-sitter parser for '" .. lang .. "'. Run ':TSInstall " .. lang .. "' to install it.", vim.log.levels.WARN)
+        end
+      end
+
       local b = vim.b[ev.buf]
       if b.editorconfig and b.editorconfig.enable_lsp == "false" then return end
       if ft[ev.match] then ft[ev.match](ev) end

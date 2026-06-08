@@ -194,9 +194,6 @@ if [[ "$SETUP_NVIM" == true ]]; then
     echo "  Syncing lazy.nvim plugins..."
     nvim --headless "+Lazy! sync" +qa || true
 
-    echo "  Updating Treesitter parsers..."
-    nvim --headless "+TSUpdateSync" +qa || true
-
     ok "Neovim bootstrap complete."
 fi
 
