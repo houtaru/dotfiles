@@ -208,10 +208,24 @@ o.listchars = {
   extends="▸", precedes="◂", multispace="···⬝", leadmultispace="│   ",
 }
 
--- Relative numbers on focus
+-- Relative numbers and CursorLine on focus
 local rnu = vim.api.nvim_create_augroup("RelNum", { clear=true })
-vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, { group=rnu, callback=function() if vim.wo.number and vim.fn.mode()~="i" then vim.wo.relativenumber=true end end })
-vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, { group=rnu, callback=function() if vim.wo.number then vim.wo.relativenumber=false end end })
+vim.api.nvim_create_autocmd({"BufEnter","FocusGained","InsertLeave","WinEnter"}, {
+    group=rnu,
+    callback=function()
+        if not vim.wo.number or vim.fn.mode() == "i" then return end
+        vim.wo.relativenumber=true
+        vim.wo.cursorline=true
+    end,
+})
+vim.api.nvim_create_autocmd({"BufLeave","FocusLost","InsertEnter","WinLeave"}, {
+    group=rnu,
+    callback=function()
+        if not vim.wo.number then return end
+        vim.wo.relativenumber=false
+        vim.wo.cursorline=false
+    end,
+})
 
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("WhitespaceHL", { clear=true }),
@@ -252,6 +266,8 @@ local function apply_transparency()
   local clear = { "Normal","NormalNC","NormalFloat","LineNr","SignColumn","VertSplit","WinSeparator","EndOfBuffer","Folded" }
   for _, g in ipairs(clear) do vim.api.nvim_set_hl(0, g, { bg="none", ctermbg="none" }) end
   vim.api.nvim_set_hl(0, "LspInlayHint", { fg="#808080", bg="none", ctermbg="none" })
+  -- Use subtle background to reduce underline noise:
+  vim.api.nvim_set_hl(0, "CursorLine", { bg="#2a2d2e", ctermbg=236 })
 end
 apply_transparency()
 vim.api.nvim_create_autocmd("ColorScheme", { callback = apply_transparency })
