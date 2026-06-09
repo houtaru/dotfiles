@@ -152,10 +152,6 @@ require("lazy").setup({
           path = "$HOME/code/repo/obsidian-vault",
         },
       },
-      completion = {
-        blink = true,
-        min_chars = 2,
-      },
       daily_notes = {
         folder = "dailies",
         date_format = "%Y-%m-%d",
@@ -341,7 +337,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local buf = ev.buf
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
+    local is_file = vim.uri_from_bufnr(buf):match("^file://") ~= nil
+    if is_file and client and client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
       vim.lsp.inlay_hint.enable(true, { bufnr = buf })
     end
 
@@ -369,7 +366,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
     -- Document highlight on CursorHold (replaces coc highlight)
     -- Scoped augroup per buffer avoids accumulation on many open files.
-    if client and client.server_capabilities.documentHighlightProvider then
+    if is_file and client and client.server_capabilities.documentHighlightProvider then
       local augrp = vim.api.nvim_create_augroup("LspDocHL_"..buf, { clear=true })
       vim.api.nvim_create_autocmd("CursorHold", {
         buffer   = buf,
