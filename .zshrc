@@ -257,39 +257,47 @@ alias gcb='git checkout -b' # create branch, FAILS if exists
 alias gcB='git checkout -B' # create branch, RESET if exists
 
 function gbsu() {
-  local current_branch=$(git branch --show-current)
-  git branch --set-upstream-to=${1:-origin} ${2:-$current_branch}
+  local r="origin" b="$(git branch --show-current)"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  [[ -n "$1" && "$1" != -* ]] && b="$1" && shift
+  git branch --set-upstream-to="$r/$b" "$@"
 }
 compdef _git gbsu=git-branch
 
 function gp() {
-  local remote=${1:-origin}
-  git push ${remote} $(git branch --show-current)
+  local r="origin"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  git push "$r" "$(git branch --show-current)" "$@"
 }
 compdef _git gp=git-push
 
 function ggp() {
-  local remote=${1:-origin}
-  local current_branch=$(git branch --show-current)
-  git push ${remote} ${2:-$current_branch}
+  local r="origin" b="$(git branch --show-current)"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  [[ -n "$1" && "$1" != -* ]] && b="$1" && shift
+  git push "$r" "$b" "$@"
 }
 compdef _git ggp=git-push
 
 function gpsup() {
-  local remote=${1:-origin}
-  git push --set-upstream ${remote} $(git branch --show-current)
+  local r="origin"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  git push --set-upstream "$r" "$(git branch --show-current)" "$@"
 }
 compdef _git gpsup=git-push
 
 function gl() {
-  local remote=${1:-origin}
-  git pull ${1:-origin} $(git branch --show-current)
+  local r="origin"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  git pull "$r" "$(git branch --show-current)" "$@"
 }
 compdef _git gl=git-pull
 
 function ggl() {
-  local current_branch=$(git branch --show-current)
-  git pull ${1:-origin} ${2:-$current_branch}
+  local r="origin" b="$(git branch --show-current)"
+  [[ -n "$1" && "$1" != -* ]] && r="$1" && shift
+  [[ -n "$1" && "$1" != -* ]] && b="$1" && shift
+  git pull "$r" "$b" "$@"
 }
 compdef _git ggl=git-pull
 
@@ -470,3 +478,5 @@ git-toggle-status() {
 
 # Added by Antigravity CLI installer
 export PATH="/Users/ijika/.local/bin:$PATH"
+export SSL_CERT_FILE=/etc/ssl/cert.pem
+export NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem
