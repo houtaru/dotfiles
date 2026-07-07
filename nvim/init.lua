@@ -47,7 +47,7 @@ require("lazy").setup({
       sources  = {
         default = { "lsp", "path", "snippets", "buffer" },
         per_filetype = {
-          markdown = { "lsp", "path", "snippets", "buffer", "obsidian", "obsidian_new", "obsidian_tags" },
+          markdown = { "lsp", "path", "snippets", "buffer" },
         },
       },
       snippets = { preset = "default" },
