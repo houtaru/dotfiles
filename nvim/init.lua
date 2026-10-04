@@ -54,6 +54,7 @@ require("lazy").setup({
                 },
                 menu = { border = "rounded" },
             },
+            -- Use native cmdline autocompletion (see CMDLINE)
             cmdline  = { enabled = false },
             sources  = {
                 default = { "lsp", "path", "snippets", "buffer" },
@@ -350,8 +351,7 @@ o.statusline = "%!v:lua.statusline()"
 o.laststatus = 3
 
 -- ── NATIVE LSP (0.12) ────────────────────────────────────────────────────────
--- Own LSP keys are kept (gd gy gi gr); delete the gr* defaults so `gr` fires without a timeoutlen wait.
--- pcall: the defaults are already gone when the config is re-sourced.
+-- Own LSP keys are kept (gd gy gi gr); remove the gr* defaults so `gr` fires without a timeoutlen wait.
 for _, lhs in ipairs({ "grn", "grr", "gri", "grt", "grx" }) do pcall(vim.keymap.del, "n", lhs) end
 pcall(vim.keymap.del, { "n", "x" }, "gra")
 
@@ -1089,14 +1089,18 @@ local function sync_container_file(c, path)
     if st and not future and (refreshed[cache_path] or st.mtime.sec >= session_start) and have_copy then
         return cache_path
     end
-    -- An unreachable container must not hide a copy that exists: stale beats the host path,
-    -- which does not exist outside the container. failed_paths stays clear so a later call
-    -- can refresh once the container is back.
-    local function use_stale()
-        if not stale_warned[path] then
-            stale_warned[path] = true
-            vim.notify(("container %s unreachable; showing cached copy from %s for %s")
-                :format(c.name, os.date("%Y-%m-%d %H:%M", st.mtime.sec), path), vim.log.levels.WARN)
+    -- Use cached path if container unreachable.
+    local function use_stale(reason)
+        if not stale_warned[cache_path] then
+            stale_warned[cache_path] = true
+            local date = os.date("%Y-%m-%d %H:%M", st.mtime.sec)
+            if reason then
+                vim.notify(("container %s: cannot refresh %s (%s); showing cached copy from %s")
+                    :format(c.name, path, reason, date), vim.log.levels.WARN)
+            else
+                vim.notify(("container %s unreachable; showing cached copy from %s for %s")
+                    :format(c.name, date, path), vim.log.levels.WARN)
+            end
         end
         return cache_path
     end
@@ -1119,7 +1123,7 @@ local function sync_container_file(c, path)
         return path
     end
 
-    local ok, sys = pcall(vim.system, { c.cmd, "exec", "-i", c.name, "cat", path }, { text = true })
+    local ok, sys = pcall(vim.system, { c.cmd, "exec", "-i", c.name, "cat", path })
     if not ok then
         dead_until[c.name] = now + DEAD_MS
         dead_warned[c.name] = nil
@@ -1131,18 +1135,18 @@ local function sync_container_file(c, path)
     end
     local res = sys:wait(2000)
     if not res or res.code ~= 0 then
-        -- On timeout :wait() kills the process and yields code 124, or nil if the exit has not
-        -- been reaped yet.
         local timed_out = not res or res.code == 124
         if timed_out then
             dead_until[c.name] = now + DEAD_MS
             dead_warned[c.name] = nil
         end
+        local stderr = res and vim.trim(res.stderr or "") or ""
         if have_copy then
             stale_retry[cache_path] = now + DEAD_MS
-            return use_stale()
+            if timed_out then return use_stale() end
+            return use_stale(stderr ~= "" and stderr or ("exit code " .. res.code))
         end
-        local why = timed_out and "timed out" or vim.trim(res.stderr or "")
+        local why = timed_out and "timed out" or stderr
         return fail_path(path, ("container %s: cannot read %s: %s"):format(c.name, path, why))
     end
 
@@ -1154,8 +1158,8 @@ local function sync_container_file(c, path)
     -- seconds, long enough for a symlink to appear at tmp that a plain write would follow.
     -- Mode 0444: edits to a cache file never reach the container (see the readonly autocmd);
     -- rename and prune only need write permission on the directory.
-    local fd
-    local ok, werr = pcall(function()
+    local fd, werr;
+    ok, werr = pcall(function()
         mkdir_p(vim.fs.dirname(cache_path))
         local _, uerr, uname = vim.uv.fs_unlink(tmp)
         if uerr and uname ~= "ENOENT" then error(uerr, 0) end
@@ -1177,6 +1181,7 @@ local function sync_container_file(c, path)
         return fail_path(path, ("container %s: cannot write cache for %s: %s"):format(c.name, path, werr))
     end
     refreshed[cache_path] = true
+    stale_warned[cache_path] = nil
     return cache_path
 end
 
@@ -1216,19 +1221,15 @@ vim.lsp.handlers["textDocument/diagnostic"] = function(err, result, ctx, ...)
     return as_client(ctx and ctx.client_id, orig_pull_diagnostics, err, result, ctx, ...)
 end
 
-local function container_uri_to_fname(uri)
-    local path = orig_uri_to_fname(uri)
-    if not uri:match("^file://") then return path end
-
-    -- Jumps (gd etc.) start in the current buffer, so its own client decides: a host-only
-    -- buffer must not have its targets copied out of an unrelated container. Without a
-    -- client in the current buffer (help, terminal, qf), fall back to the focus-independent
-    -- running_container() rule.
+-- Jumps (gd etc.) start in the current buffer, so its own client decides: a host-only
+-- buffer must not have its targets copied out of an unrelated container. Without a
+-- client in the current buffer (help, terminal, qf), fall back to the focus-independent
+-- running_container() rule. Returns the container entry (nil for host files) and its root.
+local function select_container()
     local c, ambiguous
     local attached = vim.lsp.get_clients({ bufnr = 0 })
     if converting_client then
         c = container_clients[converting_client]
-        if not c then return path end
     elseif #attached > 0 then
         -- Lowest id wins so several container clients on one buffer map deterministically.
         table.sort(attached, function(a, b) return a.id < b.id end)
@@ -1236,18 +1237,38 @@ local function container_uri_to_fname(uri)
             c = container_clients[client.id]
             if c then break end
         end
-        if not c then return path end
     else
         c, ambiguous = running_container()
         if ambiguous then c = container(vim.api.nvim_get_current_buf()) end
-        if not c then return path end
     end
+    if not c then return nil end
+    return c, c.root or vim.fn.getcwd()
+end
 
-    local root = c.root or vim.fn.getcwd()
-    local prefix = root:sub(-1) == "/" and root or root .. "/"
+local function container_uri_to_fname(uri)
+    local path = orig_uri_to_fname(uri)
+    if not uri:match("^file://") then return path end
+
+    local c, root = select_container()
+    if not c then return path end
+    local prefix = root and (root:sub(-1) == "/" and root or root .. "/") -- append '/' to path
     if path == root or vim.startswith(path, prefix) then return path end
 
     return sync_container_file(c, path)
+end
+
+-- Whether container_uri_to_fname would map this URI into a cache, decided without fetching:
+-- a fetch of a not-yet-existing target (workspace-edit create/rename) fails and would mark
+-- the path failed for the session.
+local function maps_into_cache(uri)
+    if type(uri) ~= "string" or not uri:match("^file://") then return false end
+    local path = orig_uri_to_fname(uri)
+    local c, root = select_container()
+    if not c or failed_paths[path] then return false end
+    local prefix = root:sub(-1) == "/" and root or root .. "/"
+    if path == root or vim.startswith(path, prefix) then return false end
+    local cache_path = container_cache_path(c.name, path, c.root)
+    return cache_path ~= nil and physical(cache_path)
 end
 vim.uri_to_fname = container_uri_to_fname
 -- vim.uri_to_bufnr (jump targets, related diagnostics, workspace edits) looks up the
@@ -1276,8 +1297,9 @@ vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "BufWinEnter" }, {
 })
 
 -- A workspace edit touching a nomodifiable cache buffer would raise E21 midway and leave
--- the edit half-applied, so those changes are dropped up front. Whether a URI is a cache
--- file is whatever the uri_to_fname hook decides, so the container choice is not duplicated.
+-- the edit half-applied, so those changes are dropped up front. A URI counts when it already
+-- points into a cache or the hook would map it into one; the latter is asked without
+-- fetching, as create/rename targets do not exist yet.
 -- Kept in _G so re-sourcing wraps the original again instead of nesting wrappers.
 _G._orig_apply_workspace_edit = _G._orig_apply_workspace_edit or vim.lsp.util.apply_workspace_edit
 local orig_apply_workspace_edit = _G._orig_apply_workspace_edit
@@ -1288,8 +1310,8 @@ vim.lsp.util.apply_workspace_edit = function(workspace_edit, offset_encoding, ..
     local skipped, seen = {}, {}
     local function is_skipped(uri)
         if type(uri) ~= "string" or not uri:match("^file://") then return false end
-        if not in_container_cache(vim.uri_to_fname(uri)) then return false end
         local orig_path = orig_uri_to_fname(uri)
+        if not in_container_cache(orig_path) and not maps_into_cache(uri) then return false end
         if not seen[orig_path] then
             seen[orig_path] = true
             table.insert(skipped, orig_path)
